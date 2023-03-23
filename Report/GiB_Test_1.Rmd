@@ -1,0 +1,130 @@
+---
+title: "Analysis of Hardwood Price-Size Data"
+date: "`r Sys.Date()`"
+output:
+  rmdformats::readthedown:
+    highlight: kate
+    css: jf_style.css
+    include:
+      before_body: header_white_logo_R.html
+---
+
+
+
+
+```{r, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, message = FALSE, warning = FALSE)
+
+#### this section loads relevant R libraries, some extra functions and sets the working directory (where files are loaded/saved)####
+
+library(tidyverse) #loads suite of tidyverse libraries
+library(knitr)
+library(rpivotTable)
+library(rmarkdown)
+library(yaml)
+library(scales)
+library(car)
+library(emmeans)
+library(multcompView)
+library(stringi)
+library(flexdashboard)
+library(plotly)
+library(gganimate)
+library(RColorBrewer)
+library(pals)
+library(kableExtra)
+library(readxl)
+library(lme4)
+library(nlme)
+library(lmerTest)
+library(DHARMa)
+library(writexl)
+library(lubridate)
+library(MASS)
+library(nnet)
+library(glmmTMB)
+library(ggpubr)
+
+trim <- function (x) gsub("^\\s+|\\s+$", "", x)
+firstup <- function(x) {
+  substr(x, 1, 1) <- toupper(substr(x, 1, 1))
+  x
+}
+
+reverse_legend_labels <- function(plotly_plot) {
+  n_labels <- length(plotly_plot$x$data)
+  plotly_plot$x$data[1:n_labels] <- plotly_plot$x$data[n_labels:1]
+  plotly_plot
+}
+
+str_break <- function(str, n) {
+paste(stringi::stri_wrap(str, n, normalise=TRUE,simplify=TRUE),collapse="\n")}
+
+div_palette_gr_fun<-function(x){c(rgb(seq(98,134,length.out = x),seq(166,32,length.out = x),seq(14,65,length.out = x),maxColorValue = 255))}
+
+div_palette_gp_fun<-function(x){c(rgb(seq(98,103,length.out = x),seq(166,37,length.out = x),seq(14,127,length.out = x),maxColorValue = 255))}
+
+div_palette_gbr_fun<-function(x){c(rgb(seq(98,105,length.out = x),seq(166,65,length.out = x),seq(14,44,length.out = x),maxColorValue = 255))}
+
+div_palette_gb_fun<-function(x){c(rgb(seq(98,0,length.out = x),seq(166,115,length.out = x),seq(14,144,length.out = x),maxColorValue = 255))}
+
+qual_palette<-c(rgb(98,166,14,maxColorValue = 255),rgb(103,37,127,maxColorValue = 255),rgb(185,73,23,maxColorValue = 255),rgb(134,32,65,maxColorValue = 255),rgb(0,115,144,maxColorValue = 255),rgb(0,105,57,maxColorValue = 255),rgb(187,243,118,maxColorValue = 255),rgb(199,140,221,maxColorValue = 255),rgb(239,157,122,maxColorValue = 255),rgb(226,135,165,maxColorValue = 255),rgb(106,225,255,maxColorValue = 255),rgb(106,255,188,maxColorValue = 255))
+
+#home-made functions that may be required
+
+
+setwd("C:/Users/jack.forster/OneDrive - Forest Research/Documents/HomeDrive/157b22_GiB/hwpsc/Report")
+```
+
+
+```{r data load and clean, include=FALSE}
+
+gib_raw<-data.frame(t(read.csv("C:/Users/jack.forster/OneDrive - Forest Research/Documents/HomeDrive/157b22_GiB/R Code and Data/2897344.csv")))
+
+
+Qu_sub_not_fill_match<-c("X...UserID","UserNo","Name","Email","IP.Address","Unique.ID","Started","Ended","Q1..Please.enter.the.respondent.reference.number.provided.to.you.via.email..6.character.digit.alpha.numeric.reference..e.g..a12b3c..","Q2..How.many.timber.parcels.were.you.responsible.for.selling.buying.from.01.01.2022.to.31.12.2022.in.total.","Q3..Location.of.parcel..County","Q4..Location.of.parcel..Region","Q8..Please.describe.whether.this.was.a.sale.or.purchase.of.a.felled.or.standing.timber.parcel.")#  don't want these to be filled down in Qu_sub
+
+gib_raw <-
+  gib_raw %>% mutate(
+    Qu_main = trim(paste0(row.names(df_raw))),
+    Qu_sub = trim(paste0(X1)),
+    Qu_sub_sub = trim(paste0(df_raw$X2)),
+    Qu_main = ifelse(str_detect(Qu_sub, "Site specific or other factors that alter prices"),"QXX Site specific or other factors that alter prices",Qu_main),
+    Qu_sub = ifelse(str_detect(Qu_main, "Are.there.any.hardwood.tree.species.that.were.not"),"Unfilled",Qu_sub),
+    Qu_sub = ifelse(Qu_main %in% Qu_sub_not_fill_match, "Unfilled", Qu_sub),
+    Qu_main = ifelse(Qu_main == "X...UserID", "UserID", Qu_main),
+    Qu_main = ifelse(substr(Qu_main, 1, 1) == "X", NA, Qu_main),
+    Qu_sub = ifelse(Qu_sub == "", NA, Qu_sub)
+  ) %>% fill(Qu_main:Qu_sub) %>% 
+  mutate(Parameter = paste(Qu_main, Qu_sub, Qu_sub_sub, sep =":")) %>%
+  dplyr::select(-c(X1:X2))
+row.names(gib_raw)<-NULL # remove row names
+
+gib_raw_user_details <-
+  gib_raw %>% filter(Qu_main %in% c("UserID","UserNo","Started","Ended","Q1..Please.enter.the.respondent.reference.number.provided.to.you.via.email..6.character.digit.alpha.numeric.reference..e.g..a12b3c..","Q2..How.many.timber.parcels.were.you.responsible.for.selling.buying.from.01.01.2022.to.31.12.2022.in.total.","Q3..Location.of.parcel..County","Q4..Location.of.parcel..Region","Q5..Overall.parcel.volume..please.answer.using.your.preferred.units...Please.provide.responses.in.either.cubic.metres.or.hoppus.feet.","Q6..Date.of.felling...estimated","Q7..Date.of.sale.purchase","Q8..Please.describe.whether.this.was.a.sale.or.purchase.of.a.felled.or.standing.timber.parcel.")) %>% mutate(Qu_main = ifelse(str_detect(Qu_main,"Q5.."),paste0(Qu_main,":",Qu_sub_sub),Qu_main)) %>%
+  pivot_longer(!Qu_main:Parameter) %>%
+  dplyr::select(-c(Parameter,Qu_sub,Qu_sub_sub))%>%
+  pivot_wider(names_from=Qu_main,values_from = value) %>% dplyr::select(-name) %>%
+  dplyr::rename("Unique_GiB_Ref"="Q1..Please.enter.the.respondent.reference.number.provided.to.you.via.email..6.character.digit.alpha.numeric.reference..e.g..a12b3c..","N_Timber_Parcels"="Q2..How.many.timber.parcels.were.you.responsible.for.selling.buying.from.01.01.2022.to.31.12.2022.in.total.","County"="Q3..Location.of.parcel..County","Region"="Q4..Location.of.parcel..Region","Parcel_Volume_m3"="Q5..Overall.parcel.volume..please.answer.using.your.preferred.units...Please.provide.responses.in.either.cubic.metres.or.hoppus.feet.:Q5.1.1. m3","Parcel_Volume_hft"="Q5..Overall.parcel.volume..please.answer.using.your.preferred.units...Please.provide.responses.in.either.cubic.metres.or.hoppus.feet.:Q5.1.2. hft","Date_felled_est"="Q6..Date.of.felling...estimated","Date_sale_purchase_est"="Q7..Date.of.sale.purchase","Cat_Key_Trt"="Q8..Please.describe.whether.this.was.a.sale.or.purchase.of.a.felled.or.standing.timber.parcel.")
+
+
+gib_raw_timber_details <-
+  gib_raw %>% filter(!Qu_main %in% c("UserNo","Name","Email","IP.Address","Unique.ID","Started","Ended","Q1..Please.enter.the.respondent.reference.number.provided.to.you.via.email..6.character.digit.alpha.numeric.reference..e.g..a12b3c..","Q2..How.many.timber.parcels.were.you.responsible.for.selling.buying.from.01.01.2022.to.31.12.2022.in.total.","Q3..Location.of.parcel..County","Q4..Location.of.parcel..Region","Q5..Overall.parcel.volume..please.answer.using.your.preferred.units...Please.provide.responses.in.either.cubic.metres.or.hoppus.feet.","Q6..Date.of.felling...estimated","Q7..Date.of.sale.purchase","Q8..Please.describe.whether.this.was.a.sale.or.purchase.of.a.felled.or.standing.timber.parcel.")) %>%
+  pivot_longer(!Qu_main:Parameter) %>% group_by (name) %>% mutate(UserID=value[Qu_main=="UserID"]) %>%ungroup() %>% 
+  filter(!Qu_main=="UserID") %>%
+  mutate(across(Qu_main:Qu_sub_sub,~gsub("[.]"," ",.x))) %>% mutate(Qu_main=trim(substr(Qu_main,4,nchar(Qu_main))), Qu_sub=ifelse(str_detect(Qu_sub,"Unfilled"),"Unfilled",trim(substr(Qu_sub,7,nchar(Qu_sub)))), Qu_sub_sub=ifelse(str_detect(Qu_sub_sub,"Unfilled"),"Unfilled",trim(substr(Qu_sub_sub,9,nchar(Qu_sub_sub))))) 
+
+gib_raw_numeric_timber_details<- gib_raw_timber_details %>% filter(str_starts(Qu_main,"Timber|Firewood")) %>% dplyr::select(UserID,Qu_main,Qu_sub,Qu_sub_sub,value) %>% group_by(UserID,Qu_main,Qu_sub,Qu_sub_sub) %>%
+  summarise(value=sum(as.numeric(value),na.rm=TRUE)) %>%ungroup() %>%
+  mutate(Timber_Firewood=ifelse(str_starts(Qu_main,"Timber"),"Timber","Firewood"),Tree_Species_Product=Qu_sub)%>%dplyr::select(UserID,Timber_Firewood,Tree_Species_Product,Qu_sub_sub,value)%>%pivot_wider(names_from=Qu_sub_sub, values_from=value)
+
+gib_raw_character_timber_details<- gib_raw_timber_details %>% filter(str_starts(Qu_main,"Timber|Firewood")==FALSE)%>%filter(str_starts(Qu_main,"Location of timber parcel")==FALSE) %>% dplyr::select(UserID,Qu_main,value) %>% distinct() %>% arrange(desc(value)) %>% group_by(UserID,Qu_main)%>%slice_head(n=1) %>% pivot_wider(names_from=Qu_main, values_from=value)
+
+gib_raw_gps_timber_details<- gib_raw_timber_details %>% filter(str_starts(Qu_main,"Timber|Firewood")==FALSE)%>%filter(str_starts(Qu_main,"Location of timber parcel")) %>% dplyr::select(UserID,Qu_sub_sub,value) %>% distinct() %>% arrange(desc(value)) %>% group_by(UserID,Qu_sub_sub)%>%slice_head(n=1) %>% pivot_wider(names_from=Qu_sub_sub, values_from=value)
+  
+gib_clean_data<-full_join(full_join(full_join(gib_raw_user_details,gib_raw_character_timber_details),gib_raw_gps_timber_details),gib_raw_numeric_timber_details)
+
+write_xlsx(gib_clean_data,"gib_clean_data.xlsx")
+```
+
+

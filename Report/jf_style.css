@@ -1,0 +1,137 @@
+
+<style type="text/css"> .rpivotTable{overflow: auto; font-size: 10px; line-height: 0.9} </style>
+
+<style type="text/css"> .pvtCheckContainer{overflow: auto; font-size: 8px; max-height: 100px} </style>
+
+<style>
+.plotly { overflow: visible; }
+.ggplotly { overflow: visible; }
+.plotlyOutput { overflow: visible; }
+</style>
+
+
+
+<style>                     
+
+@media print {
+#TOC { display: none; }
+}
+
+h1,h2,h3,h4,h5,h6,legend{
+    color: #550B6A;
+}
+
+body{
+    background: #ffffff;
+}
+
+#sidebar{
+    background-color:#D095E9;
+    background: #D095E9;
+}
+
+#postamble{
+    background-color:#550B6A;
+    border-top: 0px;
+}
+
+
+#content {
+background-color: #ffffff;
+background: #ffffff;
+max-width:1000px;
+
+}
+
+main a {
+    background-image: linear-gradient(180deg,#d64a70,#d64a70);
+    color:#c7254e;
+}
+
+a:hover{
+    color:#3d1308
+}
+
+
+#sidebar a {
+    color: #000000;
+}
+
+
+#nav-top span.glyphicon {
+    color: #006939;
+}
+
+#sidebar h2 {
+    background-color: #550B6A;
+}
+
+
+#sidebar h2 a {
+    text-align: left;
+    font-family: arial;
+}
+
+a { color: #550B6A; } /* CSS hyperlink color */
+
+#main :not(.leaflet-control) > a {color: #550B6A; }
+
+
+</style>
+
+<style>
+.container {display:table;width:100%}
+.col-left-50{
+  float: left;
+  width: 50%;
+  height: 100%;
+  margin-left: 0px;margin-right: 0px;margin-top:10px; margin-bottom:10px; 
+}
+.col-right-50{
+  float: right;
+  width: 50%;
+  height: 100%;
+  margin-left: 0px;margin-right: 0px;margin-top:10px; margin-bottom:10px; 
+}
+
+.full-col-green{
+  display: table;
+  background-color: #CAF793;
+  border-radius: 20px;
+  padding: 10px;
+  border:2px solid black;
+  width: 100%;
+  height: 100%;
+  margin-left: auto; margin-right: auto; margin-top:15px; margin-bottom:15px;  
+}
+
+.full-col-purp{
+  display: table;
+  background-color: #D095E9;
+  border-radius: 20px;
+  padding: 10px;
+  border:2px solid black;
+  width: 100%;
+  height: 100%;
+  margin-left: auto; margin-right: auto; margin-top:15px; margin-bottom:15px; 
+}
+
+.center {
+  display: table;
+  margin-right: auto !important;
+  margin-left: auto !important;
+}
+
+.div.gapss {background: transparent;border: 0;padding: 5px;outline: 0; height: 60px;width: 100%; float:left}
+
+.div-graph-title{
+  display: table;
+  padding-top: 0px;
+  margin-right: auto !important;
+  margin-left: auto !important;
+  margin-top:0px; margin-bottom:20px;
+  text-align: center;
+  font-size: 12px;
+}
+
+</style> 
