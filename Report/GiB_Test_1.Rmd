@@ -148,6 +148,52 @@ gib_clean_data_units_aligned <-
       `Average Tree Size (m3)`,
     Log_Tree = ifelse(Cat_Key_Trt == "Purchase: Felled", "Log", "Tree"),
     Parcel_Volume_Clean_m3 = Parcel_Volume_m3 + Parcel_Volume_hft * hardwood_m3_per_hft
-  )%>%dplyr::select(-c(Parcel_Volume_m3:Parcel_Volume_hft,`Price (Â£/m3)`:`Total Volume (m3)`))%>%filter(!Volume_Clean_m3==0)
+  )%>%dplyr::select(-c(Parcel_Volume_m3:Parcel_Volume_hft,`Price (Â£/m3)`:`Total Volume (m3)`))%>%filter(!Volume_Clean_m3==0)%>%mutate(Tree_Species=str_split(Tree_Species_Product," ",simplify=TRUE)[,1],Tree_Species=ifelse(Tree_Species=="Sweet","Sweet Chestnut",Tree_Species),Grade=ifelse(str_detect(str_to_lower(Tree_Species_Product),"biomass"),"Grade C",word(str_extract(Tree_Species_Product, "Grade.*"),1,2,sep=" ")),Grade=ifelse(is.na(Grade),"Mixed/Unknown",Grade),Product=case_when(
+    Timber_Firewood=="Firewood"~"Biomass/Firewood",
+    str_detect(str_to_lower(Tree_Species_Product),"planking")~"Planking",
+    str_detect(str_to_lower(Tree_Species_Product),"biomass")~"Biomass/Firewood",
+    str_detect(str_to_lower(Tree_Species_Product),"sawlogs")~"Sawlogs",
+    str_detect(str_to_lower(Tree_Species_Product),"beam")~"Beam",
+    TRUE~"Mixed/Unknown"
+    ))
+write_xlsx(gib_clean_data_units_aligned,"gib_clean_data_units_aligned.xlsx")
+```
+
+
+
+
+```{r initial plots, include=FALSE}
+gg_gib1<-ggplot(gib_clean_data_units_aligned,aes(x=Tree_Species_Product,y=Price_Clean_m3))+
+  theme_bw()+
+  #facet_wrap(~Log_Tree,scales="free")+
+  geom_jitter(aes(colour=Tree_Species_Product),size=3,alpha=0.5,width=0.2)+
+  geom_boxplot(colour="black",fill=NA,outlier.shape = NA,width=0.4)+
+  labs(x="Product",y=expression(Price~(GBP~m^-3)))+
+  theme(axis.text=element_text(size=12),axis.text.x = element_text(size=10,angle=90,hjust=1,vjust=0.5),axis.title=element_text(face="bold",size=14),strip.background=element_rect(fill=NA),strip.text=element_text(size=10))+
+  guides(colour="none")
+
+
+#### define product
+model_1<-lmer(Price_Clean_m3~splines::ns(scale(Volume_Clean_m3),df=3)*(Tree_Species+Grade+Cat_Key_Trt+Timber_Firewood)+scale(Parcel_Volume_Clean_m3)+Log_Tree+N_Timber_Parcels+Region+(1|Unique_GiB_Ref),data=gib_clean_data_units_aligned)
+
+gg_gib2<-ggplot(gib_clean_data_units_aligned,aes(x=Average_Size_Clean_m3,y=Price_Clean_m3))+
+  theme_bw()+
+  facet_wrap(~Log_Tree,scales="free")+
+  geom_point(aes(colour=Tree_Species),size=3,alpha=0.7)+
+  geom_smooth(aes(colour=Tree_Species,fill=Tree_Species),method="lm",alpha=0.3)+
+  labs(x=expression(Price~(GBP~m^-3)),y=expression(Volume~(m^3)))+
+  theme(axis.text=element_text(size=12),axis.text.x = element_text(size=10,angle=90,hjust=1,vjust=0.5),axis.title=element_text(face="bold",size=14),strip.background=element_rect(fill=NA),strip.text=element_text(size=10))+
+  guides(fill="none")
+gg_gib2
+```
+
+
+```{r initial functions analysis, include=FALSE}
+tree_sp_func<-list("Ash","Beech","Cherry","Lime","Mixed","Oak","Poplar","Sweet Chestnut","Sycamore")
+
+tree_product_func<-list("Beam","Biomass/Firewood","Mixed/Unknown","Planking","Sawlog")
+
+tree_pred_func<-list("Log/Tree Size","Species","Product","Region")[[1]]
+
 
 ```

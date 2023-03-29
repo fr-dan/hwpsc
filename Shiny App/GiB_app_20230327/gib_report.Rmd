@@ -1,0 +1,1633 @@
+---
+title: "Whinlatter Report:"
+date: "`r Sys.Date()`"
+output: 
+  flexdashboard::flex_dashboard:
+   self_contained: TRUE
+   vertical_layout: fill
+   orientation: rows
+   theme: flatly
+   bg: white
+params:
+  df1_rmd:  NA
+---
+
+<style type="text/css"> .rpivotTable{overflow: auto; font-size: 10px; line-height: 0.9} </style>
+
+<style type="text/css"> .pvtCheckContainer{overflow: auto; font-size: 8px; max-height: 100px} </style>
+
+<style>
+.plotly { overflow: auto; }
+.ggplotly { overflow: auto; }
+.plotlyOutput { overflow: auto; }
+</style>
+
+<style> .navbar {
+  background-color:#67257F;
+  border-color:black;
+}
+/* All of this intitial styling can be ignored - jump to  Chunk 1*/
+/* This is the tab ribbon */
+
+.navbar-brand {
+color:white!important;
+} </style>
+
+<style> .sidebar { overflow: auto; } </style>
+
+<style type="text/css"> .rpivotTable{overflow: auto; font-size: 10px; line-height: 0.9} </style>
+
+<style type="text/css"> .pvtCheckContainer{overflow: auto; font-size: 8px; max-height: 100px} </style>
+
+<style> .plotly { overflow: auto; } </style>
+
+<style> .ggplotly { overflow: auto; } </style>
+
+<style> .plotlyOutput { overflow: auto; } </style>
+
+
+
+<style type="text/css">
+
+.storyboard-nav{
+background-color:#ffffff;
+}
+
+.section.level1{
+background-color:#ffffff;
+}
+
+.sbframe-content .dashboard-row-orientation{
+background-color:#ffffff;
+}
+
+
+.storyboard-nav .sbframelist {
+        margin: 0 auto;
+        width: 94%;
+        height: 40px;
+        font-size: 1em;
+        overflow: hidden;
+        text-shadow: none;
+        margin-bottom: 8px;
+}
+/* This is the sub-tab ribbon */
+
+
+.storyboard-nav .sbframelist ul li {
+        font-size: 0.9em;
+        background-color:#E9D1F1;
+}
+/* This is the non-highlighted sub-tab within a tab */
+
+.storyboard-nav .sbframelist ul li.active {
+        font-size: 0.9em;
+        background-color:#67257F;
+}
+/* This is the highlighted sub-tab within a tab */
+
+
+.sbframe-commentary {
+        font-size: 0.9em;
+        background-color:#E9D1F1;
+}
+/* This is the storyboard sidebar */
+
+.storyboard-nav .sbnext, .storyboard-nav .sbprev {
+        float: left;
+        width: 2%;
+        height: 40px;
+        font-size: 1em;
+}
+
+.section.sidebar {
+        font-size: 1em;
+        background-color:#E9D1F1;
+}
+/* This is the standard sidebar */
+
+
+.chart-title {  /* chart_title  */
+   font-size: 20px}
+.nav a{font-size: 1em !important}
+.navbar-brand {font-size: 1.1em !important}
+}
+
+ 
+
+</style>
+
+  
+<style>
+.row-top-50{
+  float: top;
+  height: 50%;
+}
+.row-bottom-50{
+  float: bottom;
+  height: 50%;
+}
+
+.row-top-34{
+  float: top;
+  height: 34%;
+}
+.row-bottom-33{
+  float: bottom;
+  height: 33%;
+}
+
+.col-b-left-50{
+  float: left;
+  width: 50%;
+  height: 50%;
+}
+.col-b-right-50{
+  float: right;
+  width: 50%;
+  height: 50%;
+}
+</style> 
+
+<style>
+    a { color: #862041; } /* CSS hyperlink color */
+</style>
+
+```{r global_1, include=FALSE}
+#### this section loads relevant R libraries, some extra functions and sets the working directory (where files are loaded/saved)####
+
+library(tidyverse) #loads suite of tidyverse libraries
+library(knitr)
+library(rpivotTable)
+library(rmarkdown)
+library(yaml)
+library(scales)
+library(car)
+library(emmeans)
+library(multcompView)
+library(stringi)
+library(flexdashboard)
+library(plotly)
+library(gganimate)
+library(RColorBrewer)
+library(pals)
+#library(kableExtra)
+library(readxl)
+library(lme4)
+library(nlme)
+library(lmerTest)
+library(DHARMa)
+library(extrafont)
+library(tidytext)
+library(writexl)
+library(openxlsx)
+library(mgcv)
+library(lubridate)
+library(collapse)
+
+trim <- function (x) gsub("^\\s+|\\s+$", "", x)
+firstup <- function(x) {
+  substr(x, 1, 1) <- toupper(substr(x, 1, 1))
+  x
+}
+
+reverse_legend_labels <- function(plotly_plot) {
+  n_labels <- length(plotly_plot$x$data)
+  plotly_plot$x$data[1:n_labels] <- plotly_plot$x$data[n_labels:1]
+  plotly_plot
+}
+
+str_break <- function(str, n) {
+paste(stringi::stri_wrap(str, n, normalise=TRUE,simplify=TRUE),collapse="\n")}
+
+div_palette_gr_fun<-function(x){c(rgb(seq(98,134,length.out = x),seq(166,32,length.out = x),seq(14,65,length.out = x),maxColorValue = 255))}
+
+div_palette_gp_fun<-function(x){c(rgb(seq(98,103,length.out = x),seq(166,37,length.out = x),seq(14,127,length.out = x),maxColorValue = 255))}
+
+div_palette_gbr_fun<-function(x){c(rgb(seq(98,105,length.out = x),seq(166,65,length.out = x),seq(14,44,length.out = x),maxColorValue = 255))}
+
+div_palette_gb_fun<-function(x){c(rgb(seq(98,0,length.out = x),seq(166,115,length.out = x),seq(14,144,length.out = x),maxColorValue = 255))}
+
+qual_palette<-c(rgb(98,166,14,maxColorValue = 255),rgb(103,37,127,maxColorValue = 255),rgb(185,73,23,maxColorValue = 255),rgb(134,32,65,maxColorValue = 255),rgb(0,115,144,maxColorValue = 255),rgb(0,105,57,maxColorValue = 255))
+
+
+#home-made functions that may be required
+
+#data from app
+whinlatter_raw<-data.frame(params$df1_rmd)
+whinlatter_raw[c(1,2,3,7,8,9)]<-lapply(whinlatter_raw[c(1,2,3,7,8,9)],as.character)
+whinlatter_raw[c(4,5,6)]<-lapply(whinlatter_raw[c(4,5,6)],as.numeric)
+
+holiday_days<-c(seq(as.Date("19/12/2020",format="%d/%m/%Y"),as.Date("04/01/2021",format="%d/%m/%Y"),by=1),seq(as.Date("13/02/2021",format="%d/%m/%Y"),as.Date("21/02/2021",format="%d/%m/%Y"),by=1),seq(as.Date("02/04/2021",format="%d/%m/%Y"),as.Date("18/04/2021",format="%d/%m/%Y"),by=1),seq(as.Date("01/04/2021",format="%d/%m/%Y"),as.Date("18/04/2021",format="%d/%m/%Y"),by=1),seq(as.Date("01/05/2021",format="%d/%m/%Y"),as.Date("03/05/2021",format="%d/%m/%Y"),by=1),seq(as.Date("30/05/2021",format="%d/%m/%Y"),as.Date("06/06/2021",format="%d/%m/%Y"),by=1),seq(as.Date("17/07/2021",format="%d/%m/%Y"),as.Date("01/09/2021",format="%d/%m/%Y"),by=1),seq(as.Date("23/10/2021",format="%d/%m/%Y"),as.Date("31/10/2021",format="%d/%m/%Y"),by=1),seq(as.Date("17/12/2021",format="%d/%m/%Y"),as.Date("03/01/2022",format="%d/%m/%Y"),by=1),seq(as.Date("12/02/2022",format="%d/%m/%Y"),as.Date("20/02/2022",format="%d/%m/%Y"),by=1),seq(as.Date("02/04/2022",format="%d/%m/%Y"),as.Date("18/04/2022",format="%d/%m/%Y"),by=1),seq(as.Date("30/04/2022",format="%d/%m/%Y"),as.Date("02/05/2022",format="%d/%m/%Y"),by=1),seq(as.Date("30/05/2022",format="%d/%m/%Y"),as.Date("05/06/2022",format="%d/%m/%Y"),by=1),seq(as.Date("23/07/2022",format="%d/%m/%Y"),as.Date("30/08/2022",format="%d/%m/%Y"),by=1),seq(as.Date("22/10/2022",format="%d/%m/%Y"),as.Date("30/10/2022",format="%d/%m/%Y"),by=1),seq(as.Date("17/12/2022",format="%d/%m/%Y"),as.Date("02/01/2023",format="%d/%m/%Y"),by=1),seq(as.Date("11/02/2023",format="%d/%m/%Y"),as.Date("19/02/2023",format="%d/%m/%Y"),by=1),seq(as.Date("01/04/2023",format="%d/%m/%Y"),as.Date("16/04/2023",format="%d/%m/%Y"),by=1),seq(as.Date("27/05/2023",format="%d/%m/%Y"),as.Date("04/06/2023",format="%d/%m/%Y"),by=1),seq(as.Date("22/07/2023",format="%d/%m/%Y"),as.Date("01/09/2023",format="%d/%m/%Y"),by=1))
+```
+
+
+
+```{r global_2, include=FALSE, echo=FALSE,message = FALSE,warning=FALSE}
+whinlatter_raw$Entry<-as.POSIXct(ifelse(substr(whinlatter_raw$Entry,1,2)=="20",as.POSIXct(whinlatter_raw$Entry,format="%Y-%m-%d %H:%M"),as.POSIXct(whinlatter_raw$Entry,format="%d/%m/%Y %H:%M")),origin="1970-01-01 00:00.00 UTC")
+
+whinlatter_clean<-whinlatter_raw%>%distinct(Entry,Plate,Duration,.keep_all = TRUE) #remove duplicates
+
+names(whinlatter_clean)<-gsub("[.]","_",names(whinlatter_clean))
+
+car_reg_data<-data.frame(Year_Reg=rep(paste0(2001:2030,"/",sprintf("%02d", 2:31)),2),Reg_ID=c(1:30,51:80))
+
+whinlatter_clean$Entry_formatted<-format(as.POSIXct(whinlatter_clean$Entry,format="%d/%m/%Y %H:%M"),format='%d/%m/%Y %H:%M:%S')
+whinlatter_clean<-whinlatter_clean%>%arrange(desc(Entry_formatted))
+whinlatter_clean$Entry_day<-as.Date(whinlatter_clean$Entry)
+whinlatter_clean$Entry_time<-format(whinlatter_clean$Entry,format='%H:%M:%S')
+whinlatter_clean$Entry_time_numeric<-as.numeric(substr(whinlatter_clean$Entry_time,1,2))+as.numeric(substr(whinlatter_clean$Entry_time,4,5))/60+as.numeric(substr(whinlatter_clean$Entry_time,7,8))/(60*60)
+whinlatter_clean$Entry_time_integer<-as.numeric(substr(whinlatter_clean$Entry_time,1,2))
+whinlatter_clean$Entry_day_of_week<-weekdays(whinlatter_clean$Entry)
+whinlatter_clean$Entry_day_of_week<-factor(whinlatter_clean$Entry_day_of_week,levels=c("Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"))
+whinlatter_clean$Entry_month<-factor(month(whinlatter_clean$Entry,label=TRUE,abbr=TRUE),levels=c("Jan","Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"),ordered=FALSE)
+whinlatter_clean$Entry_year<-year(whinlatter_clean$Entry)
+whinlatter_clean$Entry_month_year<-paste0(as.character(whinlatter_clean$Entry_month)," ",as.character(whinlatter_clean$Entry_year))
+whinlatter_clean$Entry_month_year<-factor(whinlatter_clean$Entry_month_year,levels=unique(whinlatter_clean$Entry_month_year))
+whinlatter_clean$Entry_numeric<-as.numeric(whinlatter_clean$Entry_day-min(whinlatter_clean$Entry_day,na.rm=TRUE))+whinlatter_clean$Entry_time_numeric/24
+whinlatter_clean$Entry_integer<-as.numeric(whinlatter_clean$Entry_day-min(whinlatter_clean$Entry_day,na.rm=TRUE))
+
+whinlatter_clean$Exit<-as.POSIXct(ifelse(substr(whinlatter_clean$Exit,1,2)=="20",as.POSIXct(whinlatter_clean$Exit,format="%Y-%m-%d %H:%M"),as.POSIXct(whinlatter_clean$Exit,format="%d/%m/%Y %H:%M")),origin="1970-01-01 00:00.00 UTC")
+whinlatter_clean$Exit_formatted<-format(as.POSIXct(whinlatter_clean$Exit,format="%d/%m/%Y %H:%M"),format='%d/%m/%Y %H:%M:%S')
+whinlatter_clean$Exit_day<-as.Date(whinlatter_clean$Exit)
+whinlatter_clean$Exit_time<-format(whinlatter_clean$Exit,format='%H:%M:%S')
+whinlatter_clean$Exit_time_numeric<-as.numeric(substr(whinlatter_clean$Exit_time,1,2))+as.numeric(substr(whinlatter_clean$Exit_time,4,5))/60+as.numeric(substr(whinlatter_clean$Exit_time,7,8))/(60*60)
+whinlatter_clean$Exit_time_integer<-as.numeric(substr(whinlatter_clean$Exit_time,1,2))
+whinlatter_clean$Exit_day_of_week<-weekdays(whinlatter_clean$Exit)
+whinlatter_clean$Exit_day_of_week<-factor(whinlatter_clean$Exit_day_of_week,levels=c("Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"))
+whinlatter_clean$Exit_numeric<-as.numeric(whinlatter_clean$Exit_day-min(whinlatter_clean$Exit_day,na.rm=TRUE))+whinlatter_clean$Exit_time_numeric/24
+whinlatter_clean$Exit_integer<-as.numeric(whinlatter_clean$Exit_day-min(whinlatter_clean$Exit_day,na.rm=TRUE))
+
+
+whinlatter_clean$Payment_Time<-as.POSIXct(ifelse(substr(whinlatter_clean$Payment_Time,1,2)=="20",as.POSIXct(whinlatter_clean$Payment_Time,format="%Y-%m-%d %H:%M"),as.POSIXct(whinlatter_clean$Payment_Time,format="%d/%m/%Y %H:%M")),origin="1970-01-01 00:00.00 UTC")
+whinlatter_clean$Payment_Time_formatted<-format(as.POSIXct(whinlatter_clean$Payment_Time,format="%d/%m/%Y %H:%M"),format='%d/%m/%Y %H:%M:%S')
+whinlatter_clean$Payment_Time_day<-as.Date(whinlatter_clean$Payment_Time)
+whinlatter_clean$Payment_Time_time<-format(whinlatter_clean$Payment_Time,format='%H:%M:%S')
+whinlatter_clean$Payment_Time_time_numeric<-as.numeric(substr(whinlatter_clean$Payment_Time_time,1,2))+as.numeric(substr(whinlatter_clean$Payment_Time_time,4,5))/60+as.numeric(substr(whinlatter_clean$Payment_Time_time,7,8))/(60*60)
+whinlatter_clean$Payment_Time_time_integer<-as.numeric(substr(whinlatter_clean$Payment_Time_time,1,2))
+whinlatter_clean$Payment_Time_day_of_week<-weekdays(whinlatter_clean$Payment_Time)
+whinlatter_clean$Payment_Time_day_of_week<-factor(whinlatter_clean$Payment_Time_day_of_week,levels=c("Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"))
+whinlatter_clean$Payment_Time_numeric<-as.numeric(whinlatter_clean$Payment_Time_day-min(whinlatter_clean$Payment_Time_day,na.rm=TRUE))+whinlatter_clean$Payment_Time_time_numeric/24
+whinlatter_clean$Payment_Time_integer<-as.numeric(whinlatter_clean$Payment_Time_day-min(whinlatter_clean$Payment_Time_day,na.rm=TRUE))
+
+whinlatter_clean[10:16]<-lapply(whinlatter_clean[10:16],function(x) as.factor(ifelse(is.na(x),0,x)))
+whinlatter_clean$Reg_ID<-as.numeric(substr(whinlatter_clean$Plate,3,4))
+whinlatter_clean<-left_join(whinlatter_clean,car_reg_data)
+whinlatter_clean$Year_Reg<-factor(whinlatter_clean$Year_Reg,levels=sort(unique(whinlatter_clean$Year_Reg)))
+whinlatter_clean$Holiday<-factor(ifelse(whinlatter_clean$Entry_day%in%holiday_days,"Holiday","Non-holiday"),levels=c("Non-holiday","Holiday"))
+whinlatter_clean$Holiday_num_entry<-as.numeric(ifelse(whinlatter_clean$Holiday=="Holiday",8,NA))
+whinlatter_clean$Holiday_num_exit<-as.numeric(ifelse(whinlatter_clean$Holiday=="Holiday",8,NA))
+whinlatter_clean$Holiday_num_dur<-as.numeric(ifelse(whinlatter_clean$Holiday=="Holiday",10,NA))
+whinlatter_clean$Holiday_num_count<-as.numeric(ifelse(whinlatter_clean$Holiday=="Holiday",0,NA))
+
+
+whinlatter_clean$Payment_Source<-ifelse(whinlatter_clean$Payment_Source==""|whinlatter_clean$Payment_Source=="Revelin Moss"|is.na(whinlatter_clean$Payment_Source),"Unknown",whinlatter_clean$Payment_Source)
+whinlatter_clean$Payment_Source<-dplyr::recode(whinlatter_clean$Payment_Source,"kiosk 2"="Kiosk 2","kiosk 3"="Kiosk 3","kiosk 1"="Kiosk 1")
+whinlatter_clean$Payment_Source<-factor(whinlatter_clean$Payment_Source,levels=c("Kiosk 1","Kiosk 2","Kiosk 3","Website","Shop Kiosk","Unknown"))
+
+whinlatter_clean$Walking_name<-ifelse(whinlatter_clean$Walking=="1","Walking","")
+whinlatter_clean$Biking_name<-ifelse(whinlatter_clean$Biking=="1","Biking","")
+whinlatter_clean$Play_name<-ifelse(whinlatter_clean$Play=="1","Play","")
+whinlatter_clean$Cafe_name<-ifelse(whinlatter_clean$Cafe=="1","Cafe","")
+whinlatter_clean$Running_name<-ifelse(whinlatter_clean$Running=="1","Running","")
+whinlatter_clean$Bike_Hire_name<-ifelse(whinlatter_clean$Bike_Hire=="1","Bike Hire","")
+whinlatter_clean$Go_Ape_name<-ifelse(whinlatter_clean$Go_Ape=="1","Go Ape","")
+
+whinlatter_clean$UniqueID<-as.character(1:nrow(whinlatter_clean))
+
+whinlatter_clean_stack<-whinlatter_clean%>%dplyr::select(UniqueID,Walking_name:Go_Ape_name)%>%pivot_longer(!UniqueID)%>%group_by(UniqueID)%>%summarise(All_Activities=paste(value,collapse="+"))%>%mutate(All_Activities=ifelse(nchar(sub("[+]$", "", sub("^[+]", "",gsub('([+])\\1+', '\\1',All_Activities))))<=1,"None",(sub("[+]$", "", sub("^[+]", "",gsub('([+])\\1+', '\\1',All_Activities))))))%>%group_by(All_Activities)%>%mutate(All_Activities_Count=n(),All_Activities_Prop=n()/max(as.numeric(UniqueID)))%>%ungroup()%>%mutate(All_Activities_Refined=ifelse(All_Activities_Prop<0.01,"Other Combination",All_Activities))
+
+whinlatter_clean<-left_join(whinlatter_clean,whinlatter_clean_stack)
+
+whinlatter_clean$All_Activities_Refined<-factor(whinlatter_clean$All_Activities_Refined,levels=data.frame(whinlatter_clean%>%group_by(All_Activities_Refined)%>%summarise(count=n())%>%arrange(desc(count)))[,1])
+
+whinlatter_day_summary<-whinlatter_clean%>%fgroup_by(Entry_day,Entry_day_of_week,Entry_integer,Entry_month,Entry_year,Entry_month_year,Holiday,Holiday_num_entry,Holiday_num_exit,Holiday_num_dur,Holiday_num_count)%>%fsummarise(Count=fnobs(Entry_time_numeric),median_time_entry=fmedian(Entry_time_numeric),lower05_time_entry=fnth(Entry_time_numeric,n=0.05),upper95_time_entry=fnth(Entry_time_numeric,n=0.95),lower25_time_entry=fnth(Entry_time_numeric,n=0.25),upper75_time_entry=fnth(Entry_time_numeric,n=0.75),median_time_exit=fmedian(Exit_time_numeric),lower05_time_exit=fnth(Exit_time_numeric,n=0.05),upper95_time_exit=fnth(Exit_time_numeric,n=0.95),lower25_time_exit=fnth(Exit_time_numeric,n=0.25),upper75_time_exit=fnth(Exit_time_numeric,n=0.75),median_time_payment=fmedian(Payment_Time_time_numeric),lower05_time_payment=fnth(Payment_Time_time_numeric,n=0.05),upper95_time_payment=fnth(Payment_Time_time_numeric,n=0.95),lower25_time_payment=fnth(Payment_Time_time_numeric,n=0.25),upper75_time_payment=fnth(Payment_Time_time_numeric,n=0.75),median_stay=fmedian(Duration),lower05_stay=fnth(Duration,n=0.05),upper95_stay=fnth(Duration,n=0.95),lower25_stay=fnth(Duration,n=0.25),upper75_stay=fnth(Duration,n=0.75))%>%fmutate(Type="Summary")%>%filter(!Count<7) #exclude counts of <7 as initial view of data shows not reliable
+
+whinlatter_weekday_summary<-whinlatter_day_summary%>% filter(Entry_integer>106)%>%fgroup_by(Entry_day_of_week)%>%fsummarise(Count_weekdays=fnobs(Entry_day_of_week),median_time_entry_weekday=fmedian(median_time_entry),lower05_time_entry_weekday=fnth(median_time_entry,n=0.05),upper95_time_entry_weekday=fnth(median_time_entry,n=0.95),lower25_time_entry_weekday=fnth(median_time_entry,n=0.25),upper75_time_entry_weekday=fnth(median_time_entry,n=0.75),median_time_exit_weekday=fmedian(median_time_exit),lower05_time_exit_weekday=fnth(median_time_exit,n=0.05),upper95_time_exit_weekday=fnth(median_time_exit,n=0.95),lower25_time_exit_weekday=fnth(median_time_exit,n=0.25),upper75_time_exit_weekday=fnth(median_time_exit,n=0.75),median_time_payment_weekday=fmedian(median_time_payment),lower05_time_payment_weekday=fnth(median_time_payment,n=0.05),upper95_time_payment_weekday=fnth(median_time_payment,n=0.95),lower25_time_payment_weekday=fnth(median_time_payment,n=0.25),upper75_time_payment_weekday=fnth(median_time_payment,n=0.75),median_stay_weekday=fmedian(median_stay),lower05_stay_weekday=fnth(median_stay,n=0.05),upper95_stay_weekday=fnth(median_stay,n=0.95),lower25_stay_weekday=fnth(median_stay,n=0.25),upper75_stay_weekday=fnth(median_stay,n=0.75),median_Count_weekday=fmedian(Count),lower05_Count_weekday=fnth(Count,n=0.05),upper95_Count_weekday=fnth(Count,n=0.95),lower25_Count_weekday=fnth(Count,n=0.25),upper75_Count_weekday=fnth(Count,n=0.75))%>%mutate(Type="Summary") 
+
+whinlatter_day_summary_plus_kiosk<-whinlatter_clean%>%fgroup_by(Entry_day,Entry_day_of_week,Entry_integer,Entry_month,Entry_year,Entry_month_year,Payment_Source)%>%fsummarise(Count=fnobs(Entry_day),median_time_entry=fmedian(Entry_time_numeric),lower05_time_entry=fnth(Entry_time_numeric,n=0.05),upper95_time_entry=fnth(Entry_time_numeric,n=0.95),lower25_time_entry=fnth(Entry_time_numeric,n=0.25),upper75_time_entry=fnth(Entry_time_numeric,n=0.75),median_time_exit=fmedian(Exit_time_numeric),lower05_time_exit=fnth(Exit_time_numeric,n=0.05),upper95_time_exit=fnth(Exit_time_numeric,n=0.95),lower25_time_exit=fnth(Exit_time_numeric,n=0.25),upper75_time_exit=fnth(Exit_time_numeric,n=0.75),median_time_payment=fmedian(Payment_Time_time_numeric),lower05_time_payment=fnth(Payment_Time_time_numeric,n=0.05),upper95_time_payment=fnth(Payment_Time_time_numeric,n=0.95),lower25_time_payment=fnth(Payment_Time_time_numeric,n=0.25),upper75_time_payment=fnth(Payment_Time_time_numeric,n=0.75),median_stay=fmedian(Duration),lower05_stay=fnth(Duration,n=0.05),upper95_stay=fnth(Duration,n=0.95),lower25_stay=fnth(Duration,n=0.25),upper75_stay=fnth(Duration,n=0.75))%>%mutate(Type="Summary")%>%filter(!Count<7) #exclude counts of <7 as initial view of data shows not reliable
+
+
+whinlatter_day_summary_plus_holiday<-whinlatter_clean%>%fgroup_by(Entry_day,Entry_day_of_week,Entry_integer,Entry_month,Entry_year,Entry_month_year,Holiday)%>%fsummarise(Count=fnobs(Entry_day),median_time_entry=fmedian(Entry_time_numeric),lower05_time_entry=fnth(Entry_time_numeric,n=0.05),upper95_time_entry=fnth(Entry_time_numeric,n=0.95),lower25_time_entry=fnth(Entry_time_numeric,n=0.25),upper75_time_entry=fnth(Entry_time_numeric,n=0.75),median_time_exit=fmedian(Exit_time_numeric),lower05_time_exit=fnth(Exit_time_numeric,n=0.05),upper95_time_exit=fnth(Exit_time_numeric,n=0.95),lower25_time_exit=fnth(Exit_time_numeric,n=0.25),upper75_time_exit=fnth(Exit_time_numeric,n=0.75),median_time_payment=fmedian(Payment_Time_time_numeric),lower05_time_payment=fnth(Payment_Time_time_numeric,n=0.05),upper95_time_payment=fnth(Payment_Time_time_numeric,n=0.95),lower25_time_payment=fnth(Payment_Time_time_numeric,n=0.25),upper75_time_payment=fnth(Payment_Time_time_numeric,n=0.75),median_stay=fmedian(Duration),lower05_stay=fnth(Duration,n=0.05),upper95_stay=fnth(Duration,n=0.95),lower25_stay=fnth(Duration,n=0.25),upper75_stay=fnth(Duration,n=0.75))%>%mutate(Type="Summary")%>%filter(!Count<7) #exclude counts of <7 as initial view of data shows not reliable
+
+whinlatter_day_summary_plus_time<-whinlatter_clean%>%fgroup_by(Entry_day,Entry_day_of_week,Entry_integer,Entry_month,Entry_year,Entry_month_year,Entry_time_integer)%>%fsummarise(Count=fnobs(Entry_day),median_stay=fmedian(Duration),lower05_stay=fnth(Duration,n=0.05),upper95_stay=fnth(Duration,n=0.95),lower25_stay=fnth(Duration,n=0.25),upper75_stay=fnth(Duration,n=0.75))%>%mutate(Type="Summary")%>%filter(!Count<7) #exclude counts of <7 as initial view of data shows not reliable
+
+whinlatter_time_summary<-whinlatter_day_summary_plus_time%>% filter(Entry_integer>106)%>%fgroup_by(Entry_day_of_week,Entry_time_integer)%>%fsummarise(median_count=fmedian(Count),lower05_count=fnth(Count,n=0.05),upper95_count=fnth(Count,n=0.95),lower25_count=fnth(Count,n=0.25),upper75_count=fnth(Count,n=0.75),median_stay=fmedian(median_stay),lower05_stay=fnth(median_stay,n=0.05),upper95_stay=fnth(median_stay,n=0.95),lower25_stay=fnth(median_stay,n=0.25),upper75_stay=fnth(median_stay,n=0.75))%>%mutate(Type="Summary") #exclude counts of <7 as initial view of data shows not reliable
+
+whinlatter_kiosk_summary<-whinlatter_day_summary_plus_kiosk%>%filter(Entry_integer>106)%>%fgroup_by(Payment_Source)%>%fsummarise(Count_kiosk=fnobs(Payment_Source),median_time_entry_kiosk=fmedian(median_time_entry),lower05_time_entry_kiosk=fnth(median_time_entry,n=0.05),upper95_time_entry_kiosk=fnth(median_time_entry,n=0.95),lower25_time_entry_kiosk=fnth(median_time_entry,n=0.25),upper75_time_entry_kiosk=fnth(median_time_entry,n=0.75),median_time_exit_kiosk=fmedian(median_time_exit),lower05_time_exit_kiosk=fnth(median_time_exit,n=0.05),upper95_time_exit_kiosk=fnth(median_time_exit,n=0.95),lower25_time_exit_kiosk=fnth(median_time_exit,n=0.25),upper75_time_exit_kiosk=fnth(median_time_exit,n=0.75),median_time_payment_kiosk=fmedian(median_time_payment),lower05_time_payment_kiosk=fnth(median_time_payment,n=0.05),upper95_time_payment_kiosk=fnth(median_time_payment,n=0.95),lower25_time_payment_kiosk=fnth(median_time_payment,n=0.25),upper75_time_payment_kiosk=fnth(median_time_payment,n=0.75),median_stay_kiosk=fmedian(median_stay),lower05_stay_kiosk=fnth(median_stay,n=0.05),upper95_stay_kiosk=fnth(median_stay,n=0.95),lower25_stay_kiosk=fnth(median_stay,n=0.25),upper75_stay_kiosk=fnth(median_stay,n=0.75),median_Count_kiosk=fmedian(Count),lower05_Count_kiosk=fnth(Count,n=0.05),upper95_Count_kiosk=fnth(Count,n=0.95),lower25_Count_kiosk=fnth(Count,n=0.25),upper75_Count_kiosk=fnth(Count,n=0.75))%>%mutate(Type="Summary",xmin=as.integer(Payment_Source)-0.2,xmax=as.integer(Payment_Source)+0.2)
+
+whinlatter_holiday_summary<-whinlatter_day_summary_plus_holiday%>%filter(Entry_integer>106)%>%fgroup_by(Holiday)%>%fsummarise(Count_holiday=fnobs(Holiday),median_time_entry_holiday=fmedian(median_time_entry),lower05_time_entry_holiday=fnth(median_time_entry,n=0.05),upper95_time_entry_holiday=fnth(median_time_entry,n=0.95),lower25_time_entry_holiday=fnth(median_time_entry,n=0.25),upper75_time_entry_holiday=fnth(median_time_entry,n=0.75),median_time_exit_holiday=fmedian(median_time_exit),lower05_time_exit_holiday=fnth(median_time_exit,n=0.05),upper95_time_exit_holiday=fnth(median_time_exit,n=0.95),lower25_time_exit_holiday=fnth(median_time_exit,n=0.25),upper75_time_exit_holiday=fnth(median_time_exit,n=0.75),median_time_payment_holiday=fmedian(median_time_payment),lower05_time_payment_holiday=fnth(median_time_payment,n=0.05),upper95_time_payment_holiday=fnth(median_time_payment,n=0.95),lower25_time_payment_holiday=fnth(median_time_payment,n=0.25),upper75_time_payment_holiday=fnth(median_time_payment,n=0.75),median_stay_holiday=fmedian(median_stay),lower05_stay_holiday=fnth(median_stay,n=0.05),upper95_stay_holiday=fnth(median_stay,n=0.95),lower25_stay_holiday=fnth(median_stay,n=0.25),upper75_stay_holiday=fnth(median_stay,n=0.75),median_Count_holiday=fmedian(Count),lower05_Count_holiday=fnth(Count,n=0.05),upper95_Count_holiday=fnth(Count,n=0.95),lower25_Count_holiday=fnth(Count,n=0.25),upper75_Count_holiday=fnth(Count,n=0.75))%>%mutate(Type="Summary",xmin=as.integer(Holiday)-0.2,xmax=as.integer(Holiday)+0.2)
+
+
+whinlatter_day_summary_plus_activity<-whinlatter_clean%>%fgroup_by(Entry_day,Entry_day_of_week,Entry_integer,Entry_month,Entry_year,Entry_month_year,All_Activities_Refined)%>%fsummarise(Count=fnobs(Entry_day),median_time_entry=fmedian(Entry_time_numeric),lower05_time_entry=fnth(Entry_time_numeric,n=0.05),upper95_time_entry=fnth(Entry_time_numeric,n=0.95),lower25_time_entry=fnth(Entry_time_numeric,n=0.25),upper75_time_entry=fnth(Entry_time_numeric,n=0.75),median_time_exit=fmedian(Exit_time_numeric),lower05_time_exit=fnth(Exit_time_numeric,n=0.05),upper95_time_exit=fnth(Exit_time_numeric,n=0.95),lower25_time_exit=fnth(Exit_time_numeric,n=0.25),upper75_time_exit=fnth(Exit_time_numeric,n=0.75),median_time_payment=fmedian(Payment_Time_time_numeric),lower05_time_payment=fnth(Payment_Time_time_numeric,n=0.05),upper95_time_payment=fnth(Payment_Time_time_numeric,n=0.95),lower25_time_payment=fnth(Payment_Time_time_numeric,n=0.25),upper75_time_payment=fnth(Payment_Time_time_numeric,n=0.75),median_stay=fmedian(Duration),lower05_stay=fnth(Duration,n=0.05),upper95_stay=fnth(Duration,n=0.95),lower25_stay=fnth(Duration,n=0.25),upper75_stay=fnth(Duration,n=0.75))%>%fmutate(Type="Summary")%>%filter(!Count<7) #exclude counts of <7 as initial view of data shows not reliable
+
+whinlatter_day_summary_plus_activity_plus_kiosk<-whinlatter_clean%>%fgroup_by(Entry_day,Entry_day_of_week,Entry_integer,Entry_month,Entry_year,Entry_month_year,All_Activities_Refined,Payment_Source)%>%fsummarise(Count=fnobs(Entry_day))%>%mutate(Type="Summary")
+
+whinlatter_day_summary_plus_activity_plus_time<-whinlatter_clean%>%fgroup_by(Entry_day,Entry_day_of_week,Entry_integer,Entry_month,Entry_year,Entry_month_year,All_Activities_Refined,Entry_time_integer)%>%fsummarise(Count=fnobs(Entry_day))%>%mutate(Type="Summary")
+
+whinlatter_day_summary_plus_activity_plus_holiday<-whinlatter_clean%>%fgroup_by(Entry_day,Entry_day_of_week,Entry_integer,Entry_month,Entry_year,Entry_month_year,All_Activities_Refined,Holiday)%>%fsummarise(Count=fnobs(Entry_day))%>%mutate(Type="Summary")
+
+whinlatter_activity_summary<-whinlatter_day_summary_plus_activity%>%filter(Entry_integer>106)%>%fgroup_by(All_Activities_Refined)%>%fsummarise(Count_activity=fnobs(Entry_day),median_time_entry_activity=fmedian(median_time_entry),lower05_time_entry_activity=fnth(median_time_entry,n=0.05),upper95_time_entry_activity=fnth(median_time_entry,n=0.95),lower25_time_entry_activity=fnth(median_time_entry,n=0.25),upper75_time_entry_activity=fnth(median_time_entry,n=0.75),median_time_exit_activity=fmedian(median_time_exit),lower05_time_exit_activity=fnth(median_time_exit,n=0.05),upper95_time_exit_activity=fnth(median_time_exit,n=0.95),lower25_time_exit_activity=fnth(median_time_exit,n=0.25),upper75_time_exit_activity=fnth(median_time_exit,n=0.75),median_time_payment_activity=fmedian(median_time_payment),lower05_time_payment_activity=fnth(median_time_payment,n=0.05),upper95_time_payment_activity=fnth(median_time_payment,n=0.95),lower25_time_payment_activity=fnth(median_time_payment,n=0.25),upper75_time_payment_activity=fnth(median_time_payment,n=0.75),median_stay_activity=fmedian(median_stay),lower05_stay_activity=fnth(median_stay,n=0.05),upper95_stay_activity=fnth(median_stay,n=0.95),lower25_stay_activity=fnth(median_stay,n=0.25),upper75_stay_activity=fnth(median_stay,n=0.75),median_Count_activity=fmedian(Count),lower05_Count_activity=fnth(Count,n=0.05),upper95_Count_activity=fnth(Count,n=0.95),lower25_Count_activity=fnth(Count,n=0.25),upper75_Count_activity=fnth(Count,n=0.75))%>%mutate(Type="Summary")
+
+
+whinlatter_activity_day_summary<-whinlatter_day_summary_plus_activity%>%filter(Entry_integer>106)%>%fgroup_by(All_Activities_Refined,Entry_day_of_week)%>%fsummarise(median_count_activity=fmedian(Count),lower05_count_activity=fnth(Count,n=0.05),upper95_count_activity=fnth(Count,n=0.95),lower25_count_activity=fnth(Count,n=0.25),upper75_count_activity=fnth(Count,n=0.75))%>%mutate(Type="Summary")
+
+whinlatter_activity_kiosk_summary<-whinlatter_day_summary_plus_activity_plus_kiosk%>%filter(Entry_integer>106)%>%fgroup_by(All_Activities_Refined,Payment_Source)%>%fsummarise(median_count_activity=fmedian(Count),lower05_count_activity=fnth(Count,n=0.05),upper95_count_activity=fnth(Count,n=0.95),lower25_count_activity=fnth(Count,n=0.25),upper75_count_activity=fnth(Count,n=0.75))%>%mutate(Type="Summary")
+
+whinlatter_activity_holiday_summary<-whinlatter_day_summary_plus_activity_plus_holiday%>%filter(Entry_integer>106)%>%fgroup_by(All_Activities_Refined,Holiday)%>%fsummarise(median_count_activity=fmedian(Count),lower05_count_activity=fnth(Count,n=0.05),upper95_count_activity=fnth(Count,n=0.95),lower25_count_activity=fnth(Count,n=0.25),upper75_count_activity=fnth(Count,n=0.75))%>%mutate(Type="Summary")
+whinlatter_activity_day_time_summary<-whinlatter_day_summary_plus_activity_plus_time%>%filter(Entry_integer>106)%>%fgroup_by(All_Activities_Refined,Entry_day_of_week,Entry_time_integer)%>%fsummarise(median_count_activity=fmedian(Count),lower05_count_activity=fnth(Count,n=0.05),upper95_count_activity=fnth(Count,n=0.95),lower25_count_activity=fnth(Count,n=0.25),upper75_count_activity=fnth(Count,n=0.75))%>%mutate(Type="Summary")
+
+whinlatter_activity_time_summary<-whinlatter_day_summary_plus_activity_plus_time%>%filter(Entry_integer>106)%>%fgroup_by(All_Activities_Refined,Entry_time_integer)%>%fsummarise(median_count_activity=fmedian(Count),lower05_count_activity=fnth(Count,n=0.05),upper95_count_activity=fnth(Count,n=0.95),lower25_count_activity=fnth(Count,n=0.25),upper75_count_activity=fnth(Count,n=0.75))%>%mutate(Type="Summary")
+
+whinlatter_clean_act<-whinlatter_clean%>%group_by(Entry_day,All_Activities_Refined,.drop=FALSE)%>%summarise(Count=n())
+
+whinlatter_clean_act_kiosk<-whinlatter_clean%>%group_by(Payment_Source,All_Activities_Refined,.drop=FALSE)%>%summarise(Count=n())
+```
+
+
+# Entry Times  {data-icon="fas fa-arrow-right"}
+
+## Sidebar {data-width=400; .sidebar}
+
+**Entry Times** 
+
+- Time series data (top chart) are plotted as average (median) daily values (thick solid line). Thin solid inner lines contain 50% of all entry times per day; dashed lighter outer lines contain 90% of all entry times per day.
+
+- Breakdowns by day of week, kiosk and activity are plotted (bottom, tabbed) as average (median) daily values from the time series data (small data points, random variation added per point along the horizontal axis to better separate out the points). Large data points show the average (median) values per category, with darker error bars containing 50% of all entry times per category and lighter error bars containing 90% of all entry times per category.
+
+- From April/May 2021 onwards, average entry times were highly consistent through time, mostly staying with 30 minutes of 11:30.
+
+- Entry times by day of week appear similar, with average values all within 15 minutes of one another (Saturday is earliest and Tuesday is latest). Entry times by holiday/non-holiday were also similar.
+
+- Individuals who paid for parking via the website tended to have earlier entry times, although these results were more varied than the kiosk data.
+
+- There were distinct differences in entry times by activity. Runners arrived particularly early. Most data points are for Saturdays, and therefore likely reflect parkrun visits. The latest entry times were those using the cafe only, around an hour later than the next latest activity (Go Ape).
+
+
+## Row
+
+### Time series
+```{r entry ts,eval=TRUE,out.width="100%",out.heighth="50%",echo=FALSE,message = FALSE,warning=FALSE}
+
+gg_entry_ts<-ggplot(whinlatter_day_summary,aes(x=Entry_day ,y=median_time_entry,group=Type))+
+  theme_bw()+
+  geom_line(aes(y=lower05_time_entry,text=paste0(Entry_day," (",Entry_day_of_week,")","\nTime = ",paste(floor( whinlatter_day_summary$lower05_time_entry), sprintf("%02d",round(( whinlatter_day_summary$lower05_time_entry-floor(whinlatter_day_summary$lower05_time_entry))*60)), sep=":"),"\n(5% of cars had arrived by this time)")),colour=qual_palette[1],alpha=0.3,size=0.25,linetype=3)+
+    geom_line(aes(y=upper95_time_entry,text=paste0(Entry_day," (",Entry_day_of_week,")","\nTime = ",paste(floor( whinlatter_day_summary$upper95_time_entry), sprintf("%02d",round(( whinlatter_day_summary$upper95_time_entry-floor(whinlatter_day_summary$upper95_time_entry))*60)), sep=":"),"\n(95% of cars had arrived by this time)")),colour=qual_palette[1],alpha=0.3,size=0.25,linetype=3)+
+  geom_line(aes(y=lower25_time_entry,text=paste0(Entry_day," (",Entry_day_of_week,")","\nTime = ",paste(floor( whinlatter_day_summary$lower25_time_entry), sprintf("%02d",round(( whinlatter_day_summary$lower25_time_entry-floor(whinlatter_day_summary$lower25_time_entry))*60)), sep=":"),"\n(25% of cars had arrived by this time)")),colour=qual_palette[1],alpha=0.7,size=0.25)+
+  geom_line(aes(y=upper75_time_entry,text=paste0(Entry_day," (",Entry_day_of_week,")","\nTime = ",paste(floor( whinlatter_day_summary$upper75_time_entry), sprintf("%02d",round(( whinlatter_day_summary$upper75_time_entry-floor(whinlatter_day_summary$upper75_time_entry))*60)), sep=":"),"\n(75% of cars had arrived by this time)")),colour=qual_palette[1],alpha=0.7,size=0.25)+
+  geom_line(aes(text=paste0(Entry_day," (",Entry_day_of_week,")","\nTime = ",paste(floor( whinlatter_day_summary$median_time_entry), sprintf("%02d",round(( whinlatter_day_summary$median_time_entry-floor(whinlatter_day_summary$median_time_entry))*60)), sep=":"),"\n(50% of cars had arrived by this time)")),alpha=1,size=0.5,colour=qual_palette[1])+
+  geom_vline(aes(xintercept = as.numeric(as.Date("2021-04-01"))),linetype=2,colour="grey72",size=1)+
+  geom_line(aes(y=Holiday_num_entry,text="Holiday days"),alpha=0.5,colour="blue")+
+  labs(y="Time",x="Date")+
+  coord_cartesian(ylim=c(7,21),expand=FALSE)+
+  scale_y_continuous(breaks=seq(8,20,by=2),labels=c("08:00","10:00","12:00","14:00","16:00","18:00","20:00"))+
+  scale_x_date(date_breaks = "month",date_labels = "%d/%m/%Y")+
+  theme(plot.title = element_text(size=10,face="bold"),axis.title.x=element_blank(),axis.text = element_text(size=10),axis.text.x = element_text(size=8,angle=90,hjust=1,vjust=0.5),strip.background=element_rect(fill=NA,),strip.text=element_text(size=12),axis.title=element_text(size=14,face="bold"),panel.spacing=unit(0.05, "cm"))+
+  guides(fill=FALSE,linetype=FALSE)
+
+
+
+gg<-ggplotly(gg_entry_ts, tooltip=c("text"))
+m <- list(
+    l = 30,
+    r = 30,
+    b = 30,
+    t = 50,
+    pad = 0
+  )
+
+gg<-layout(gg, dragmode = "zoom")%>%layout(annotations=list(x=18628+40,y=19,text="Excluded data", showarrow = FALSE,font=list(size=14,color="#808080")))%>%style(textposition = "left")
+
+gg
+
+```
+
+## Row {.tabset}
+
+### Breakdown by day of week
+```{r entry weekday,eval=TRUE, echo=FALSE,message = FALSE,warning=FALSE}
+
+gg_entry_weekday<-ggplot(filter(whinlatter_day_summary,Entry_integer>106),aes(x=as.integer(Entry_day_of_week) ,y=median_time_entry))+
+  theme_bw()+
+  #geom_jitter(aes(colour=Entry_day_of_week,text=paste0("Number of cars\non this day = ",Count)),alpha=0.3,size=0.25,width=0.2,height=0)+
+  geom_errorbar(data=whinlatter_weekday_summary, inherit.aes=FALSE,aes(x=as.integer(Entry_day_of_week),ymin=lower05_time_entry_weekday,ymax=upper95_time_entry_weekday,colour=Entry_day_of_week,group=Entry_day_of_week),width=0.5,alpha=0.3,size=0.25)+
+  geom_point(data=whinlatter_weekday_summary, inherit.aes=FALSE,aes(x=as.integer(Entry_day_of_week),y=lower05_time_entry_weekday,colour=Entry_day_of_week,group=Entry_day_of_week,text=paste0(Entry_day_of_week,"\nTime = ",paste(floor( whinlatter_weekday_summary$lower05_time_entry_weekday), sprintf("%02d",round(( whinlatter_weekday_summary$lower05_time_entry_weekday-floor( whinlatter_weekday_summary$lower05_time_entry_weekday))*60)), sep=":"),"\n(5% of total sample)")),alpha=0,size=0)+
+  geom_point(data=whinlatter_weekday_summary, inherit.aes=FALSE,aes(x=as.integer(Entry_day_of_week),y=upper95_time_entry_weekday,colour=Entry_day_of_week,group=Entry_day_of_week,text=paste0(Entry_day_of_week,"\nTime = ",paste(floor( whinlatter_weekday_summary$upper95_time_entry_weekday), sprintf("%02d",round(( whinlatter_weekday_summary$upper95_time_entry_weekday-floor( whinlatter_weekday_summary$upper95_time_entry_weekday))*60)), sep=":"),"\n(95% of total sample)")),alpha=0,size=0)+
+  geom_errorbar(data=whinlatter_weekday_summary, inherit.aes=FALSE,aes(x=as.integer(Entry_day_of_week),ymin=lower25_time_entry_weekday,ymax=upper75_time_entry_weekday,colour=Entry_day_of_week,group=Entry_day_of_week),width=0.5,alpha=1,size=0.25)+
+  geom_point(data=whinlatter_weekday_summary, inherit.aes=FALSE,aes(x=as.integer(Entry_day_of_week),y=lower25_time_entry_weekday,colour=Entry_day_of_week,group=Entry_day_of_week,text=paste0(Entry_day_of_week,"\nTime = ",paste(floor( whinlatter_weekday_summary$lower25_time_entry_weekday), sprintf("%02d",round(( whinlatter_weekday_summary$lower25_time_entry_weekday-floor( whinlatter_weekday_summary$lower25_time_entry_weekday))*60)), sep=":"),"\n(25% of total sample)")),alpha=0,size=0)+
+  geom_point(data=whinlatter_weekday_summary, inherit.aes=FALSE,aes(x=as.integer(Entry_day_of_week),y=upper75_time_entry_weekday,colour=Entry_day_of_week,group=Entry_day_of_week,text=paste0(Entry_day_of_week,"\nTime = ",paste(floor( whinlatter_weekday_summary$upper75_time_entry_weekday), sprintf("%02d",round(( whinlatter_weekday_summary$upper75_time_entry_weekday-floor( whinlatter_weekday_summary$upper75_time_entry_weekday))*60)), sep=":"),"\n(75% of total sample)")),alpha=0,size=0)+
+  geom_point(data=whinlatter_weekday_summary, inherit.aes=FALSE,aes(x=as.integer(Entry_day_of_week),y=median_time_entry_weekday,colour=Entry_day_of_week,group=Entry_day_of_week,text=paste0(Entry_day_of_week,"\nTime = ",paste(floor( whinlatter_weekday_summary$median_time_entry_weekday), sprintf("%02d",round(( whinlatter_weekday_summary$median_time_entry_weekday-floor( whinlatter_weekday_summary$median_time_entry_weekday))*60)), sep=":"),"\n(50% of total sample)")),alpha=1,size=2.5)+
+  labs(y="Time",x="Date")+
+  coord_cartesian(ylim=c(9.5,14.5),xlim=c(0.5,7.5),expand=FALSE)+
+  scale_x_continuous(breaks=seq(1,7,by=1),labels=levels(whinlatter_day_summary$Entry_day_of_week))+
+  scale_y_continuous(breaks=seq(10,14,by=1),labels=c("10:00","11:00","12:00","13:00","14:00"))+
+  scale_colour_manual(values=div_palette_gb_fun(7))+
+  scale_fill_manual(values=div_palette_gb_fun(7))+
+  theme(plot.title = element_text(size=10,face="bold"),axis.title.x=element_blank(),axis.text = element_text(size=8),strip.background=element_rect(fill=NA,),strip.text=element_text(size=12),axis.title=element_text(size=10,face="bold"),panel.spacing=unit(0.05, "cm"))+
+  guides(fill=FALSE,linetype=FALSE,colour=FALSE)
+
+
+
+gg<-ggplotly(gg_entry_weekday, tooltip=c("text"))
+m <- list(
+    l = 30,
+    r = 30,
+    b = 30,
+    t = 50,
+    pad = 0
+  )
+
+gg<-layout(gg, dragmode = "zoom")%>%layout(legend = list(y=0.5,x=1.1,yanchor="middle",tracegroupgap = 0),hoverlabel=list(xanchor="left",yanchor="middle"))%>%style(textposition = "left", boxpoints = FALSE)
+
+gg$x$layout$showlegend<-FALSE
+
+gg
+
+```
+
+### Breakdown by holiday day
+```{r entry hols,eval=TRUE, echo=FALSE,message = FALSE,warning=FALSE}
+
+gg_entry_holiday<-ggplot(filter(whinlatter_day_summary_plus_holiday,Entry_integer>106&!is.na(Holiday)),aes(x=as.integer(Holiday) ,y=median_time_entry))+
+  theme_bw()+
+  #geom_jitter(aes(colour=Holiday,text=paste0("Day = ",Entry_day_of_week,"\nNumber of cars\non this day = ",Count)),alpha=0.3,size=0.25,width=0.2,height=0)+
+  geom_errorbar(data=whinlatter_holiday_summary, inherit.aes=FALSE,aes(x=as.integer(Holiday ),ymin=lower05_time_entry_holiday,ymax=upper95_time_entry_holiday,colour=Holiday,group=Holiday),width=0.5,alpha=0.3,size=0.25)+
+  geom_point(data=whinlatter_holiday_summary, inherit.aes=FALSE,aes(x=as.integer(Holiday ),y=lower05_time_entry_holiday,colour=Holiday,group=Holiday,text=paste0(Holiday,"\nTime = ",paste(floor( whinlatter_holiday_summary$lower05_time_entry_holiday), sprintf("%02d",round(( whinlatter_holiday_summary$lower05_time_entry_holiday-floor( whinlatter_holiday_summary$lower05_time_entry_holiday))*60)), sep=":"),"\n(5% of total sample)")),alpha=0,size=0)+
+  geom_point(data=whinlatter_holiday_summary, inherit.aes=FALSE,aes(x=as.integer(Holiday ),y=upper95_time_entry_holiday,colour=Holiday,group=Holiday,text=paste0(Holiday,"\nTime = ",paste(floor( whinlatter_holiday_summary$upper95_time_entry_holiday), sprintf("%02d",round(( whinlatter_holiday_summary$upper95_time_entry_holiday-floor( whinlatter_holiday_summary$upper95_time_entry_holiday))*60)), sep=":"),"\n(95% of total sample)")),alpha=0,size=0)+
+  geom_errorbar(data=whinlatter_holiday_summary, inherit.aes=FALSE,aes(x=as.integer(Holiday),ymin=lower25_time_entry_holiday,ymax=upper75_time_entry_holiday,colour=Holiday,group=Holiday),width=0.5,alpha=1,size=0.25)+
+  geom_point(data=whinlatter_holiday_summary, inherit.aes=FALSE,aes(x=as.integer(Holiday),y=lower25_time_entry_holiday,colour=Holiday,group=Holiday,text=paste0(Holiday,"\nTime = ",paste(floor( whinlatter_holiday_summary$lower25_time_entry_holiday), sprintf("%02d",round(( whinlatter_holiday_summary$lower25_time_entry_holiday-floor( whinlatter_holiday_summary$lower25_time_entry_holiday))*60)), sep=":"),"\n(25% of total sample)")),alpha=0,size=0)+
+  geom_point(data=whinlatter_holiday_summary, inherit.aes=FALSE,aes(x=as.integer(Holiday),y=upper75_time_entry_holiday,colour=Holiday,group=Holiday,text=paste0(Holiday,"\nTime = ",paste(floor( whinlatter_holiday_summary$upper75_time_entry_holiday), sprintf("%02d",round(( whinlatter_holiday_summary$upper75_time_entry_holiday-floor( whinlatter_holiday_summary$upper75_time_entry_holiday))*60)), sep=":"),"\n(75% of total sample)")),alpha=0,size=0)+
+  geom_point(data=whinlatter_holiday_summary, inherit.aes=FALSE,aes(x=as.integer(Holiday),y=median_time_entry_holiday,colour=Holiday,group=Holiday,text=paste0(Holiday,"\nTime = ",paste(floor( whinlatter_holiday_summary$median_time_entry_holiday), sprintf("%02d",round(( whinlatter_holiday_summary$median_time_entry_holiday-floor( whinlatter_holiday_summary$median_time_entry_holiday))*60)), sep=":"),"\n(50% of total sample)")),alpha=1,size=2.5)+
+  labs(y="Time",x="Date")+
+  coord_cartesian(ylim=c(9.5,14.5),xlim=c(0.5,2.5),expand=FALSE)+
+  scale_x_continuous(breaks=seq(1,2,by=1),labels=levels(whinlatter_day_summary_plus_holiday$Holiday))+
+  scale_y_continuous(breaks=seq(10,14,by=1),labels=c("10:00","11:00","12:00","13:00","14:00"))+
+  scale_colour_manual(values=div_palette_gbr_fun(2))+
+  scale_fill_manual(values=div_palette_gbr_fun(2))+
+  theme(plot.title = element_text(size=10,face="bold"),axis.title.x=element_blank(),axis.text = element_text(size=8),strip.background=element_rect(fill=NA,),strip.text=element_text(size=12),axis.title=element_text(size=10,face="bold"),panel.spacing=unit(0.05, "cm"))+
+  guides(fill=FALSE,linetype=FALSE,colour=FALSE)
+
+
+
+gg<-ggplotly(gg_entry_holiday, tooltip=c("text"))
+m <- list(
+    l = 100,
+    r = 100,
+    b = 30,
+    t = 50,
+    pad = 0
+  )
+
+gg<-layout(gg, dragmode = "zoom")%>%layout(legend = list(y=0.5,x=1.1,yanchor="middle",tracegroupgap = 0),hoverlabel=list(xanchor="left",yanchor="middle"))%>%style(textposition = "left", boxpoints = FALSE)
+
+gg$x$layout$showlegend<-FALSE
+
+gg
+
+```
+
+### Breakdown by kiosk
+```{r entry kiosk,eval=TRUE, echo=FALSE,message = FALSE,warning=FALSE}
+
+gg_entry_kiosk<-ggplot(filter(whinlatter_day_summary_plus_kiosk,Entry_integer>106&!is.na(Payment_Source)),aes(x=as.integer(Payment_Source) ,y=median_time_entry))+
+  theme_bw()+
+  #geom_jitter(aes(colour=Payment_Source,text=paste0("Day = ",Entry_day_of_week,"\nNumber of cars\non this day\nat this kiosk = ",Count)),alpha=0.3,size=0.25,width=0.2,height=0)+
+  geom_errorbar(data=whinlatter_kiosk_summary, inherit.aes=FALSE,aes(x=as.integer(Payment_Source ),ymin=lower05_time_entry_kiosk,ymax=upper95_time_entry_kiosk,colour=Payment_Source,group=Payment_Source),width=0.5,alpha=0.3,size=0.25)+
+  geom_point(data=whinlatter_kiosk_summary, inherit.aes=FALSE,aes(x=as.integer(Payment_Source ),y=lower05_time_entry_kiosk,colour=Payment_Source,group=Payment_Source,text=paste0(Payment_Source,"\nTime = ",paste(floor( whinlatter_kiosk_summary$lower05_time_entry_kiosk), sprintf("%02d",round(( whinlatter_kiosk_summary$lower05_time_entry_kiosk-floor( whinlatter_kiosk_summary$lower05_time_entry_kiosk))*60)), sep=":"),"\n(5% of total sample)")),alpha=0,size=0)+
+  geom_point(data=whinlatter_kiosk_summary, inherit.aes=FALSE,aes(x=as.integer(Payment_Source ),y=upper95_time_entry_kiosk,colour=Payment_Source,group=Payment_Source,text=paste0(Payment_Source,"\nTime = ",paste(floor( whinlatter_kiosk_summary$upper95_time_entry_kiosk), sprintf("%02d",round(( whinlatter_kiosk_summary$upper95_time_entry_kiosk-floor( whinlatter_kiosk_summary$upper95_time_entry_kiosk))*60)), sep=":"),"\n(95% of total sample)")),alpha=0,size=0)+
+  geom_errorbar(data=whinlatter_kiosk_summary, inherit.aes=FALSE,aes(x=as.integer(Payment_Source),ymin=lower25_time_entry_kiosk,ymax=upper75_time_entry_kiosk,colour=Payment_Source,group=Payment_Source),width=0.5,alpha=1,size=0.25)+
+  geom_point(data=whinlatter_kiosk_summary, inherit.aes=FALSE,aes(x=as.integer(Payment_Source),y=lower25_time_entry_kiosk,colour=Payment_Source,group=Payment_Source,text=paste0(Payment_Source,"\nTime = ",paste(floor( whinlatter_kiosk_summary$lower25_time_entry_kiosk), sprintf("%02d",round(( whinlatter_kiosk_summary$lower25_time_entry_kiosk-floor( whinlatter_kiosk_summary$lower25_time_entry_kiosk))*60)), sep=":"),"\n(25% of total sample)")),alpha=0,size=0)+
+  geom_point(data=whinlatter_kiosk_summary, inherit.aes=FALSE,aes(x=as.integer(Payment_Source),y=upper75_time_entry_kiosk,colour=Payment_Source,group=Payment_Source,text=paste0(Payment_Source,"\nTime = ",paste(floor( whinlatter_kiosk_summary$upper75_time_entry_kiosk), sprintf("%02d",round(( whinlatter_kiosk_summary$upper75_time_entry_kiosk-floor( whinlatter_kiosk_summary$upper75_time_entry_kiosk))*60)), sep=":"),"\n(75% of total sample)")),alpha=0,size=0)+
+  geom_point(data=whinlatter_kiosk_summary, inherit.aes=FALSE,aes(x=as.integer(Payment_Source),y=median_time_entry_kiosk,colour=Payment_Source,group=Payment_Source,text=paste0(Payment_Source,"\nTime = ",paste(floor( whinlatter_kiosk_summary$median_time_entry_kiosk), sprintf("%02d",round(( whinlatter_kiosk_summary$median_time_entry_kiosk-floor( whinlatter_kiosk_summary$median_time_entry_kiosk))*60)), sep=":"),"\n(50% of total sample)")),alpha=1,size=2.5)+
+  labs(y="Time",x="Date")+
+  coord_cartesian(ylim=c(9.5,14.5),xlim=c(0.5,6.5),expand=FALSE)+
+  scale_x_continuous(breaks=seq(1,6,by=1),labels=levels(whinlatter_day_summary_plus_kiosk$Payment_Source))+
+  scale_y_continuous(breaks=seq(10,14,by=1),labels=c("10:00","11:00","12:00","13:00","14:00"))+
+  scale_colour_manual(values=div_palette_gr_fun(6))+
+  scale_fill_manual(values=div_palette_gr_fun(6))+
+  theme(plot.title = element_text(size=10,face="bold"),axis.title.x=element_blank(),axis.text = element_text(size=8),strip.background=element_rect(fill=NA,),strip.text=element_text(size=12),axis.title=element_text(size=10,face="bold"),panel.spacing=unit(0.05, "cm"))+
+  guides(fill=FALSE,linetype=FALSE,colour=FALSE)
+
+
+
+gg<-ggplotly(gg_entry_kiosk, tooltip=c("text"))
+m <- list(
+    l = 30,
+    r = 30,
+    b = 30,
+    t = 50,
+    pad = 0
+  )
+
+gg<-layout(gg, dragmode = "zoom")%>%layout(legend = list(y=0.5,x=1.1,yanchor="middle",tracegroupgap = 0),hoverlabel=list(xanchor="left",yanchor="middle"))%>%style(textposition = "left", boxpoints = FALSE)
+
+gg$x$layout$showlegend<-FALSE
+
+gg
+
+```
+
+
+### Breakdown by activity
+```{r entry activity,out.width="50%",out.heighth="50%",eval=TRUE, echo=FALSE,message = FALSE,warning=FALSE}
+
+gg_entry_activity<-ggplot(filter(whinlatter_day_summary_plus_activity,Entry_integer>106&!is.na(All_Activities_Refined)),aes(x=as.integer(All_Activities_Refined) ,y=median_time_entry))+
+  theme_bw()+
+  #geom_jitter(aes(colour=All_Activities_Refined,text=paste0("Day = ",Entry_day_of_week,"\nNumber of cars\non this day\ndoing this activity combo = ",Count)),alpha=0.3,size=0.25,width=0.2,height=0)+
+  geom_errorbar(data=whinlatter_activity_summary, inherit.aes=FALSE,aes(x=as.integer(All_Activities_Refined ),ymin=lower05_time_entry_activity,ymax=upper95_time_entry_activity,colour=All_Activities_Refined,group=All_Activities_Refined),width=0.5,alpha=0.3,size=0.25)+
+  geom_point(data=whinlatter_activity_summary, inherit.aes=FALSE,aes(x=as.integer(All_Activities_Refined ),y=lower05_time_entry_activity,colour=All_Activities_Refined,group=All_Activities_Refined,text=paste0(All_Activities_Refined,"\nTime = ",paste(floor( whinlatter_activity_summary$lower05_time_entry_activity), sprintf("%02d",round(( whinlatter_activity_summary$lower05_time_entry_activity-floor( whinlatter_activity_summary$lower05_time_entry_activity))*60)), sep=":"),"\n(5% of total sample)")),alpha=0,size=0)+
+  geom_point(data=whinlatter_activity_summary, inherit.aes=FALSE,aes(x=as.integer(All_Activities_Refined ),y=upper95_time_entry_activity,colour=All_Activities_Refined,group=All_Activities_Refined,text=paste0(All_Activities_Refined,"\nTime = ",paste(floor( whinlatter_activity_summary$upper95_time_entry_activity), sprintf("%02d",round(( whinlatter_activity_summary$upper95_time_entry_activity-floor( whinlatter_activity_summary$upper95_time_entry_activity))*60)), sep=":"),"\n(95% of total sample)")),alpha=0,size=0)+
+  geom_errorbar(data=whinlatter_activity_summary, inherit.aes=FALSE,aes(x=as.integer(All_Activities_Refined),ymin=lower25_time_entry_activity,ymax=upper75_time_entry_activity,colour=All_Activities_Refined,group=All_Activities_Refined),width=0.5,alpha=1,size=0.25)+
+  geom_point(data=whinlatter_activity_summary, inherit.aes=FALSE,aes(x=as.integer(All_Activities_Refined),y=lower25_time_entry_activity,colour=All_Activities_Refined,group=All_Activities_Refined,text=paste0(All_Activities_Refined,"\nTime = ",paste(floor( whinlatter_activity_summary$lower25_time_entry_activity), sprintf("%02d",round(( whinlatter_activity_summary$lower25_time_entry_activity-floor( whinlatter_activity_summary$lower25_time_entry_activity))*60)), sep=":"),"\n(25% of total sample)")),alpha=0,size=0)+
+  geom_point(data=whinlatter_activity_summary, inherit.aes=FALSE,aes(x=as.integer(All_Activities_Refined),y=upper75_time_entry_activity,colour=All_Activities_Refined,group=All_Activities_Refined,text=paste0(All_Activities_Refined,"\nTime = ",paste(floor( whinlatter_activity_summary$upper75_time_entry_activity), sprintf("%02d",round(( whinlatter_activity_summary$upper75_time_entry_activity-floor( whinlatter_activity_summary$upper75_time_entry_activity))*60)), sep=":"),"\n(75% of total sample)")),alpha=0,size=0)+
+  geom_point(data=whinlatter_activity_summary, inherit.aes=FALSE,aes(x=as.integer(All_Activities_Refined),y=median_time_entry_activity,colour=All_Activities_Refined,group=All_Activities_Refined,text=paste0(All_Activities_Refined,"\nTime = ",paste(floor( whinlatter_activity_summary$median_time_entry_activity), sprintf("%02d",round(( whinlatter_activity_summary$median_time_entry_activity-floor( whinlatter_activity_summary$median_time_entry_activity))*60)), sep=":"),"\n(50% of total sample)")),alpha=1,size=2.5)+
+  labs(y="Time",x="Date")+
+  coord_cartesian(ylim=c(7.5,14.5),xlim=c(0.5,12.5),expand=FALSE)+
+  scale_x_continuous(breaks=seq(1,12,by=1),labels=levels(whinlatter_day_summary_plus_activity$All_Activities_Refined))+
+  scale_y_continuous(breaks=seq(8,14,by=1),labels=c("08:00","09:00","10:00","11:00","12:00","13:00","14:00"))+
+  scale_colour_manual(values=div_palette_gp_fun(12))+
+  scale_fill_manual(values=div_palette_gp_fun(12))+
+  theme(plot.title = element_text(size=10,face="bold"),axis.title.x=element_blank(),axis.text = element_text(size=8),axis.text.x = element_text(size=6,angle=90,hjust=1,vjust=0.5),strip.background=element_rect(fill=NA,),strip.text=element_text(size=12),axis.title=element_text(size=10,face="bold"),panel.spacing=unit(0.05, "cm"))+
+  guides(fill=FALSE,linetype=FALSE,colour=FALSE)
+
+
+
+gg<-ggplotly(gg_entry_activity, tooltip=c("text"))
+m <- list(
+    l = 30,
+    r = 30,
+    b = 30,
+    t = 50,
+    pad = 0
+  )
+
+gg<-layout(gg, dragmode = "zoom")%>%layout(legend = list(y=0.5,x=1.1,yanchor="middle",tracegroupgap = 0),hoverlabel=list(xanchor="left",yanchor="middle"))%>%style(textposition = "left", boxpoints = FALSE)
+
+gg$x$layout$showlegend<-FALSE
+
+gg
+
+```
+
+# Exit Times   {data-icon="fas fa-arrow-left"}
+
+
+## Sidebar {data-width=400; .sidebar}
+
+
+
+**Exit Times** 
+
+- Time series data (top chart) are plotted as average (median) daily values (thick solid line). Thin solid inner lines contain 50% of all exit times per day; dashed lighter outer lines contain 90% of all exit times per day.
+
+- Breakdowns by day of week, kiosk and activity are plotted (bottom, tabbed) as average (median) daily values from the time series data (small data points, random variation added per point along the horizontal axis to better separate out the points). Large data points show the average (median) values per category, with darker error bars containing 50% of all exit times per category and lighter error bars containing 90% of all exit times per category.
+
+- From April/May 2021 onwards, average exit times were reasonably consistent through time, mostly staying with 1 hour of 14:45.
+
+- Exit times by day of week appear similar, with average values all within 15 minutes of one another. Exit times by holiday/non-holiday were also similar.
+
+- Individuals who paid for parking via the shop kiosk tended to have earlier exit times.
+
+- There were distinct differences in exit times by activity. Runners left particularly early. Most data points are for Saturdays, and therefore likely reflect parkrun visits. The latest exit times were for Go Ape.
+
+
+## Row
+
+### Time series
+```{r exit ts,eval=TRUE,out.width="100%",out.heighth="50%",echo=FALSE,message = FALSE,warning=FALSE}
+
+gg_exit_ts<-ggplot(whinlatter_day_summary,aes(x=Entry_day ,y=median_time_exit,group=Type))+
+  theme_bw()+
+  geom_line(aes(y=lower05_time_exit,text=paste0(Entry_day," (",Entry_day_of_week,")","\nTime = ",paste(floor( whinlatter_day_summary$lower05_time_exit), sprintf("%02d",round(( whinlatter_day_summary$lower05_time_exit-floor(whinlatter_day_summary$lower05_time_exit))*60)), sep=":"),"\n(5% of cars had left by this time)")),colour=qual_palette[2],alpha=0.3,size=0.25,linetype=3)+
+    geom_line(aes(y=upper95_time_exit,text=paste0(Entry_day," (",Entry_day_of_week,")","\nTime = ",paste(floor( whinlatter_day_summary$upper95_time_exit), sprintf("%02d",round(( whinlatter_day_summary$upper95_time_exit-floor(whinlatter_day_summary$upper95_time_exit))*60)), sep=":"),"\n(95% of cars had left by this time)")),colour=qual_palette[2],alpha=0.3,size=0.25,linetype=3)+
+  geom_line(aes(y=lower25_time_exit,text=paste0(Entry_day," (",Entry_day_of_week,")","\nTime = ",paste(floor( whinlatter_day_summary$lower25_time_exit), sprintf("%02d",round(( whinlatter_day_summary$lower25_time_exit-floor(whinlatter_day_summary$lower25_time_exit))*60)), sep=":"),"\n(25% of cars had left by this time)")),colour=qual_palette[2],alpha=0.7,size=0.25)+
+  geom_line(aes(y=upper75_time_exit,text=paste0(Entry_day," (",Entry_day_of_week,")","\nTime = ",paste(floor( whinlatter_day_summary$upper75_time_exit), sprintf("%02d",round(( whinlatter_day_summary$upper75_time_exit-floor(whinlatter_day_summary$upper75_time_exit))*60)), sep=":"),"\n(75% of cars had left by this time)")),colour=qual_palette[2],alpha=0.7,size=0.25)+
+  geom_line(aes(text=paste0(Entry_day," (",Entry_day_of_week,")","\nTime = ",paste(floor( whinlatter_day_summary$median_time_exit), sprintf("%02d",round(( whinlatter_day_summary$median_time_exit-floor(whinlatter_day_summary$median_time_exit))*60)), sep=":"),"\n(50% of cars had left by this time)")),alpha=1,size=0.5,colour=qual_palette[2])+
+  geom_vline(aes(xintercept = as.numeric(as.Date("2021-04-01"))),linetype=2,colour="grey72",size=1)+
+  geom_line(aes(y=Holiday_num_exit,text="Holiday days"),alpha=0.5,colour="blue")+
+  labs(y="Time",x="Date")+
+  coord_cartesian(ylim=c(7,21),expand=FALSE)+
+  scale_y_continuous(breaks=seq(8,20,by=2),labels=c("08:00","10:00","12:00","14:00","16:00","18:00","20:00"))+
+  scale_x_date(date_breaks = "month",date_labels = "%d/%m/%Y")+
+  theme(plot.title = element_text(size=10,face="bold"),axis.title.x=element_blank(),axis.text = element_text(size=10),axis.text.x = element_text(size=8,angle=90,hjust=1,vjust=0.5),strip.background=element_rect(fill=NA,),strip.text=element_text(size=12),axis.title=element_text(size=14,face="bold"),panel.spacing=unit(0.05, "cm"))+
+  guides(fill=FALSE,linetype=FALSE)
+
+
+
+gg<-ggplotly(gg_exit_ts, tooltip=c("text"))
+m <- list(
+    l = 30,
+    r = 30,
+    b = 30,
+    t = 50,
+    pad = 0
+  )
+
+gg<-layout(gg, dragmode = "zoom")%>%layout(legend = list(y=0.5,x=1.1,yanchor="middle",tracegroupgap = 0),hoverlabel=list(xanchor="left",yanchor="middle"),annotations=list(x=18628+40,y=19,text="Excluded data", showarrow = FALSE,font=list(size=14,color="#808080")))%>%style(textposition = "left")
+
+gg
+
+```
+
+## Row {.tabset}
+
+### Breakdown by day of week
+```{r exit weekday,eval=TRUE, echo=FALSE,message = FALSE,warning=FALSE}
+
+gg_exit_weekday<-ggplot(filter(whinlatter_day_summary,Entry_integer>106),aes(x=as.integer(Entry_day_of_week) ,y=median_time_exit))+
+  theme_bw()+
+  #geom_jitter(aes(colour=Entry_day_of_week,text=paste0("Number of cars\non this day = ",Count)),alpha=0.3,size=0.25,width=0.2,height=0)+
+  geom_errorbar(data=whinlatter_weekday_summary, inherit.aes=FALSE,aes(x=as.integer(Entry_day_of_week),ymin=lower05_time_exit_weekday,ymax=upper95_time_exit_weekday,colour=Entry_day_of_week,group=Entry_day_of_week),width=0.5,alpha=0.3,size=0.25)+
+  geom_point(data=whinlatter_weekday_summary, inherit.aes=FALSE,aes(x=as.integer(Entry_day_of_week),y=lower05_time_exit_weekday,colour=Entry_day_of_week,group=Entry_day_of_week,text=paste0(Entry_day_of_week,"\nTime = ",paste(floor( whinlatter_weekday_summary$lower05_time_exit_weekday), sprintf("%02d",round(( whinlatter_weekday_summary$lower05_time_exit_weekday-floor( whinlatter_weekday_summary$lower05_time_exit_weekday))*60)), sep=":"),"\n(5% of total sample)")),alpha=0,size=0)+
+  geom_point(data=whinlatter_weekday_summary, inherit.aes=FALSE,aes(x=as.integer(Entry_day_of_week),y=upper95_time_exit_weekday,colour=Entry_day_of_week,group=Entry_day_of_week,text=paste0(Entry_day_of_week,"\nTime = ",paste(floor( whinlatter_weekday_summary$upper95_time_exit_weekday), sprintf("%02d",round(( whinlatter_weekday_summary$upper95_time_exit_weekday-floor( whinlatter_weekday_summary$upper95_time_exit_weekday))*60)), sep=":"),"\n(95% of total sample)")),alpha=0,size=0)+
+  geom_errorbar(data=whinlatter_weekday_summary, inherit.aes=FALSE,aes(x=as.integer(Entry_day_of_week),ymin=lower25_time_exit_weekday,ymax=upper75_time_exit_weekday,colour=Entry_day_of_week,group=Entry_day_of_week),width=0.5,alpha=1,size=0.25)+
+  geom_point(data=whinlatter_weekday_summary, inherit.aes=FALSE,aes(x=as.integer(Entry_day_of_week),y=lower25_time_exit_weekday,colour=Entry_day_of_week,group=Entry_day_of_week,text=paste0(Entry_day_of_week,"\nTime = ",paste(floor( whinlatter_weekday_summary$lower25_time_exit_weekday), sprintf("%02d",round(( whinlatter_weekday_summary$lower25_time_exit_weekday-floor( whinlatter_weekday_summary$lower25_time_exit_weekday))*60)), sep=":"),"\n(25% of total sample)")),alpha=0,size=0)+
+  geom_point(data=whinlatter_weekday_summary, inherit.aes=FALSE,aes(x=as.integer(Entry_day_of_week),y=upper75_time_exit_weekday,colour=Entry_day_of_week,group=Entry_day_of_week,text=paste0(Entry_day_of_week,"\nTime = ",paste(floor( whinlatter_weekday_summary$upper75_time_exit_weekday), sprintf("%02d",round(( whinlatter_weekday_summary$upper75_time_exit_weekday-floor( whinlatter_weekday_summary$upper75_time_exit_weekday))*60)), sep=":"),"\n(75% of total sample)")),alpha=0,size=0)+
+  geom_point(data=whinlatter_weekday_summary, inherit.aes=FALSE,aes(x=as.integer(Entry_day_of_week),y=median_time_exit_weekday,colour=Entry_day_of_week,group=Entry_day_of_week,text=paste0(Entry_day_of_week,"\nTime = ",paste(floor( whinlatter_weekday_summary$median_time_exit_weekday), sprintf("%02d",round(( whinlatter_weekday_summary$median_time_exit_weekday-floor( whinlatter_weekday_summary$median_time_exit_weekday))*60)), sep=":"),"\n(50% of total sample)")),alpha=1,size=2.5)+
+  labs(y="Time",x="Date")+
+  coord_cartesian(ylim=c(12.5,17.5),xlim=c(0.5,7.5),expand=FALSE)+
+  scale_x_continuous(breaks=seq(1,7,by=1),labels=levels(whinlatter_day_summary$Entry_day_of_week))+
+  scale_y_continuous(breaks=seq(13,17,by=1),labels=c("13:00","14:00","15:00","16:00","17:00"))+
+  scale_colour_manual(values=div_palette_gb_fun(7))+
+  scale_fill_manual(values=div_palette_gb_fun(7))+
+  theme(plot.title = element_text(size=10,face="bold"),axis.title.x=element_blank(),axis.text = element_text(size=8),strip.background=element_rect(fill=NA,),strip.text=element_text(size=12),axis.title=element_text(size=10,face="bold"),panel.spacing=unit(0.05, "cm"))+
+  guides(fill=FALSE,linetype=FALSE,colour=FALSE)
+
+
+
+gg<-ggplotly(gg_exit_weekday, tooltip=c("text"))
+m <- list(
+    l = 30,
+    r = 30,
+    b = 30,
+    t = 50,
+    pad = 0
+  )
+
+gg<-layout(gg, dragmode = "zoom")%>%layout(legend = list(y=0.5,x=1.1,yanchor="middle",tracegroupgap = 0),hoverlabel=list(xanchor="left",yanchor="middle"))%>%style(textposition = "left", boxpoints = FALSE)
+
+gg$x$layout$showlegend<-FALSE
+
+gg
+
+```
+
+
+### Breakdown by holiday day
+```{r exit hols,eval=TRUE, echo=FALSE,message = FALSE,warning=FALSE}
+
+gg_exit_holiday<-ggplot(filter(whinlatter_day_summary_plus_holiday,Entry_integer>106&!is.na(Holiday)),aes(x=as.integer(Holiday) ,y=median_time_exit))+
+  theme_bw()+
+  #geom_jitter(aes(colour=Holiday,text=paste0("Day = ",Entry_day_of_week,"\nNumber of cars\non this day = ",Count)),alpha=0.3,size=0.25,width=0.2,height=0)+
+  geom_errorbar(data=whinlatter_holiday_summary, inherit.aes=FALSE,aes(x=as.integer(Holiday ),ymin=lower05_time_exit_holiday,ymax=upper95_time_exit_holiday,colour=Holiday,group=Holiday),width=0.5,alpha=0.3,size=0.25)+
+  geom_point(data=whinlatter_holiday_summary, inherit.aes=FALSE,aes(x=as.integer(Holiday ),y=lower05_time_exit_holiday,colour=Holiday,group=Holiday,text=paste0(Holiday,"\nTime = ",paste(floor( whinlatter_holiday_summary$lower05_time_exit_holiday), sprintf("%02d",round(( whinlatter_holiday_summary$lower05_time_exit_holiday-floor( whinlatter_holiday_summary$lower05_time_exit_holiday))*60)), sep=":"),"\n(5% of total sample)")),alpha=0,size=0)+
+  geom_point(data=whinlatter_holiday_summary, inherit.aes=FALSE,aes(x=as.integer(Holiday ),y=upper95_time_exit_holiday,colour=Holiday,group=Holiday,text=paste0(Holiday,"\nTime = ",paste(floor( whinlatter_holiday_summary$upper95_time_exit_holiday), sprintf("%02d",round(( whinlatter_holiday_summary$upper95_time_exit_holiday-floor( whinlatter_holiday_summary$upper95_time_exit_holiday))*60)), sep=":"),"\n(95% of total sample)")),alpha=0,size=0)+
+  geom_errorbar(data=whinlatter_holiday_summary, inherit.aes=FALSE,aes(x=as.integer(Holiday),ymin=lower25_time_exit_holiday,ymax=upper75_time_exit_holiday,colour=Holiday,group=Holiday),width=0.5,alpha=1,size=0.25)+
+  geom_point(data=whinlatter_holiday_summary, inherit.aes=FALSE,aes(x=as.integer(Holiday),y=lower25_time_exit_holiday,colour=Holiday,group=Holiday,text=paste0(Holiday,"\nTime = ",paste(floor( whinlatter_holiday_summary$lower25_time_exit_holiday), sprintf("%02d",round(( whinlatter_holiday_summary$lower25_time_exit_holiday-floor( whinlatter_holiday_summary$lower25_time_exit_holiday))*60)), sep=":"),"\n(25% of total sample)")),alpha=0,size=0)+
+  geom_point(data=whinlatter_holiday_summary, inherit.aes=FALSE,aes(x=as.integer(Holiday),y=upper75_time_exit_holiday,colour=Holiday,group=Holiday,text=paste0(Holiday,"\nTime = ",paste(floor( whinlatter_holiday_summary$upper75_time_exit_holiday), sprintf("%02d",round(( whinlatter_holiday_summary$upper75_time_exit_holiday-floor( whinlatter_holiday_summary$upper75_time_exit_holiday))*60)), sep=":"),"\n(75% of total sample)")),alpha=0,size=0)+
+  geom_point(data=whinlatter_holiday_summary, inherit.aes=FALSE,aes(x=as.integer(Holiday),y=median_time_exit_holiday,colour=Holiday,group=Holiday,text=paste0(Holiday,"\nTime = ",paste(floor( whinlatter_holiday_summary$median_time_exit_holiday), sprintf("%02d",round(( whinlatter_holiday_summary$median_time_exit_holiday-floor( whinlatter_holiday_summary$median_time_exit_holiday))*60)), sep=":"),"\n(50% of total sample)")),alpha=1,size=2.5)+
+  labs(y="Time",x="Date")+
+  coord_cartesian(ylim=c(12.5,17.5),xlim=c(0.5,2.5),expand=FALSE)+
+  scale_x_continuous(breaks=seq(1,2,by=1),labels=levels(whinlatter_day_summary_plus_holiday$Holiday))+
+  scale_y_continuous(breaks=seq(13,17,by=1),labels=c("13:00","14:00","15:00","16:00","17:00"))+
+  scale_colour_manual(values=div_palette_gbr_fun(2))+
+  scale_fill_manual(values=div_palette_gbr_fun(62))+
+  theme(plot.title = element_text(size=10,face="bold"),axis.title.x=element_blank(),axis.text = element_text(size=8),strip.background=element_rect(fill=NA,),strip.text=element_text(size=12),axis.title=element_text(size=10,face="bold"),panel.spacing=unit(0.05, "cm"))+
+  guides(fill=FALSE,linetype=FALSE,colour=FALSE)
+
+
+
+gg<-ggplotly(gg_exit_holiday, tooltip=c("text"))
+m <- list(
+    l = 100,
+    r = 100,
+    b = 30,
+    t = 50,
+    pad = 0
+  )
+
+gg<-layout(gg, dragmode = "zoom")%>%layout(legend = list(y=0.5,x=1.1,yanchor="middle",tracegroupgap = 0),hoverlabel=list(xanchor="left",yanchor="middle"))%>%style(textposition = "left", boxpoints = FALSE)
+
+gg$x$layout$showlegend<-FALSE
+
+gg
+
+```
+
+
+### Breakdown by kiosk
+```{r exit kiosk,eval=TRUE, echo=FALSE,message = FALSE,warning=FALSE}
+
+gg_exit_kiosk<-ggplot(filter(whinlatter_day_summary_plus_kiosk,Entry_integer>106&!is.na(Payment_Source)),aes(x=as.integer(Payment_Source) ,y=median_time_exit))+
+  theme_bw()+
+  #geom_jitter(aes(colour=Payment_Source,text=paste0("Day = ",Entry_day_of_week,"\nNumber of cars\non this day\nat this kiosk = ",Count)),alpha=0.3,size=0.25,width=0.2,height=0)+
+  geom_errorbar(data=whinlatter_kiosk_summary, inherit.aes=FALSE,aes(x=as.integer(Payment_Source ),ymin=lower05_time_exit_kiosk,ymax=upper95_time_exit_kiosk,colour=Payment_Source,group=Payment_Source),width=0.5,alpha=0.3,size=0.25)+
+  geom_point(data=whinlatter_kiosk_summary, inherit.aes=FALSE,aes(x=as.integer(Payment_Source ),y=lower05_time_exit_kiosk,colour=Payment_Source,group=Payment_Source,text=paste0(Payment_Source,"\nTime = ",paste(floor( whinlatter_kiosk_summary$lower05_time_exit_kiosk), sprintf("%02d",round(( whinlatter_kiosk_summary$lower05_time_exit_kiosk-floor( whinlatter_kiosk_summary$lower05_time_exit_kiosk))*60)), sep=":"),"\n(5% of total sample)")),alpha=0,size=0)+
+  geom_point(data=whinlatter_kiosk_summary, inherit.aes=FALSE,aes(x=as.integer(Payment_Source ),y=upper95_time_exit_kiosk,colour=Payment_Source,group=Payment_Source,text=paste0(Payment_Source,"\nTime = ",paste(floor( whinlatter_kiosk_summary$upper95_time_exit_kiosk), sprintf("%02d",round(( whinlatter_kiosk_summary$upper95_time_exit_kiosk-floor( whinlatter_kiosk_summary$upper95_time_exit_kiosk))*60)), sep=":"),"\n(95% of total sample)")),alpha=0,size=0)+
+  geom_errorbar(data=whinlatter_kiosk_summary, inherit.aes=FALSE,aes(x=as.integer(Payment_Source),ymin=lower25_time_exit_kiosk,ymax=upper75_time_exit_kiosk,colour=Payment_Source,group=Payment_Source),width=0.5,alpha=1,size=0.25)+
+  geom_point(data=whinlatter_kiosk_summary, inherit.aes=FALSE,aes(x=as.integer(Payment_Source),y=lower25_time_exit_kiosk,colour=Payment_Source,group=Payment_Source,text=paste0(Payment_Source,"\nTime = ",paste(floor( whinlatter_kiosk_summary$lower25_time_exit_kiosk), sprintf("%02d",round(( whinlatter_kiosk_summary$lower25_time_exit_kiosk-floor( whinlatter_kiosk_summary$lower25_time_exit_kiosk))*60)), sep=":"),"\n(25% of total sample)")),alpha=0,size=0)+
+  geom_point(data=whinlatter_kiosk_summary, inherit.aes=FALSE,aes(x=as.integer(Payment_Source),y=upper75_time_exit_kiosk,colour=Payment_Source,group=Payment_Source,text=paste0(Payment_Source,"\nTime = ",paste(floor( whinlatter_kiosk_summary$upper75_time_exit_kiosk), sprintf("%02d",round(( whinlatter_kiosk_summary$upper75_time_exit_kiosk-floor( whinlatter_kiosk_summary$upper75_time_exit_kiosk))*60)), sep=":"),"\n(75% of total sample)")),alpha=0,size=0)+
+  geom_point(data=whinlatter_kiosk_summary, inherit.aes=FALSE,aes(x=as.integer(Payment_Source),y=median_time_exit_kiosk,colour=Payment_Source,group=Payment_Source,text=paste0(Payment_Source,"\nTime = ",paste(floor( whinlatter_kiosk_summary$median_time_exit_kiosk), sprintf("%02d",round(( whinlatter_kiosk_summary$median_time_exit_kiosk-floor( whinlatter_kiosk_summary$median_time_exit_kiosk))*60)), sep=":"),"\n(50% of total sample)")),alpha=1,size=2.5)+
+  labs(y="Time",x="Date")+
+  coord_cartesian(ylim=c(12.5,17.5),xlim=c(0.5,6.5),expand=FALSE)+
+  scale_x_continuous(breaks=seq(1,6,by=1),labels=levels(whinlatter_day_summary_plus_kiosk$Payment_Source))+
+  scale_y_continuous(breaks=seq(13,17,by=1),labels=c("13:00","14:00","15:00","16:00","17:00"))+
+  scale_colour_manual(values=div_palette_gr_fun(6))+
+  scale_fill_manual(values=div_palette_gr_fun(6))+
+  theme(plot.title = element_text(size=10,face="bold"),axis.title.x=element_blank(),axis.text = element_text(size=8),strip.background=element_rect(fill=NA,),strip.text=element_text(size=12),axis.title=element_text(size=10,face="bold"),panel.spacing=unit(0.05, "cm"))+
+  guides(fill=FALSE,linetype=FALSE,colour=FALSE)
+
+
+
+gg<-ggplotly(gg_exit_kiosk, tooltip=c("text"))
+m <- list(
+    l = 30,
+    r = 30,
+    b = 30,
+    t = 50,
+    pad = 0
+  )
+
+gg<-layout(gg, dragmode = "zoom")%>%layout(legend = list(y=0.5,x=1.1,yanchor="middle",tracegroupgap = 0),hoverlabel=list(xanchor="left",yanchor="middle"))%>%style(textposition = "left", boxpoints = FALSE)
+
+gg$x$layout$showlegend<-FALSE
+
+gg
+
+```
+
+
+### Breakdown by activity
+```{r exit activity,out.width="50%",out.heighth="50%",eval=TRUE, echo=FALSE,message = FALSE,warning=FALSE}
+
+gg_exit_activity<-ggplot(filter(whinlatter_day_summary_plus_activity,Entry_integer>106&!is.na(All_Activities_Refined)),aes(x=as.integer(All_Activities_Refined) ,y=median_time_exit))+
+  theme_bw()+
+  #geom_jitter(aes(colour=All_Activities_Refined,text=paste0("Day = ",Entry_day_of_week,"\nNumber of cars\non this day\ndoing this activity combo = ",Count)),alpha=0.3,size=0.25,width=0.2,height=0)+
+  geom_errorbar(data=whinlatter_activity_summary, inherit.aes=FALSE,aes(x=as.integer(All_Activities_Refined ),ymin=lower05_time_exit_activity,ymax=upper95_time_exit_activity,colour=All_Activities_Refined,group=All_Activities_Refined),width=0.5,alpha=0.3,size=0.25)+
+  geom_point(data=whinlatter_activity_summary, inherit.aes=FALSE,aes(x=as.integer(All_Activities_Refined ),y=lower05_time_exit_activity,colour=All_Activities_Refined,group=All_Activities_Refined,text=paste0(All_Activities_Refined,"\nTime = ",paste(floor( whinlatter_activity_summary$lower05_time_exit_activity), sprintf("%02d",round(( whinlatter_activity_summary$lower05_time_exit_activity-floor( whinlatter_activity_summary$lower05_time_exit_activity))*60)), sep=":"),"\n(5% of total sample)")),alpha=0,size=0)+
+  geom_point(data=whinlatter_activity_summary, inherit.aes=FALSE,aes(x=as.integer(All_Activities_Refined ),y=upper95_time_exit_activity,colour=All_Activities_Refined,group=All_Activities_Refined,text=paste0(All_Activities_Refined,"\nTime = ",paste(floor( whinlatter_activity_summary$upper95_time_exit_activity), sprintf("%02d",round(( whinlatter_activity_summary$upper95_time_exit_activity-floor( whinlatter_activity_summary$upper95_time_exit_activity))*60)), sep=":"),"\n(95% of total sample)")),alpha=0,size=0)+
+  geom_errorbar(data=whinlatter_activity_summary, inherit.aes=FALSE,aes(x=as.integer(All_Activities_Refined),ymin=lower25_time_exit_activity,ymax=upper75_time_exit_activity,colour=All_Activities_Refined,group=All_Activities_Refined),width=0.5,alpha=1,size=0.25)+
+  geom_point(data=whinlatter_activity_summary, inherit.aes=FALSE,aes(x=as.integer(All_Activities_Refined),y=lower25_time_exit_activity,colour=All_Activities_Refined,group=All_Activities_Refined,text=paste0(All_Activities_Refined,"\nTime = ",paste(floor( whinlatter_activity_summary$lower25_time_exit_activity), sprintf("%02d",round(( whinlatter_activity_summary$lower25_time_exit_activity-floor( whinlatter_activity_summary$lower25_time_exit_activity))*60)), sep=":"),"\n(25% of total sample)")),alpha=0,size=0)+
+  geom_point(data=whinlatter_activity_summary, inherit.aes=FALSE,aes(x=as.integer(All_Activities_Refined),y=upper75_time_exit_activity,colour=All_Activities_Refined,group=All_Activities_Refined,text=paste0(All_Activities_Refined,"\nTime = ",paste(floor( whinlatter_activity_summary$upper75_time_exit_activity), sprintf("%02d",round(( whinlatter_activity_summary$upper75_time_exit_activity-floor( whinlatter_activity_summary$upper75_time_exit_activity))*60)), sep=":"),"\n(75% of total sample)")),alpha=0,size=0)+
+  geom_point(data=whinlatter_activity_summary, inherit.aes=FALSE,aes(x=as.integer(All_Activities_Refined),y=median_time_exit_activity,colour=All_Activities_Refined,group=All_Activities_Refined,text=paste0(All_Activities_Refined,"\nTime = ",paste(floor( whinlatter_activity_summary$median_time_exit_activity), sprintf("%02d",round(( whinlatter_activity_summary$median_time_exit_activity-floor( whinlatter_activity_summary$median_time_exit_activity))*60)), sep=":"),"\n(50% of total sample)")),alpha=1,size=2.5)+
+  labs(y="Time",x="Date")+
+  coord_cartesian(ylim=c(12.5,17.5),xlim=c(0.5,12.5),expand=FALSE)+
+  scale_x_continuous(breaks=seq(1,12,by=1),labels=levels(whinlatter_day_summary_plus_activity$All_Activities_Refined))+
+  scale_y_continuous(breaks=seq(9,17,by=2),labels=c("09:00","11:00","13:00","15:00","17:00"))+
+  scale_colour_manual(values=div_palette_gp_fun(12))+
+  scale_fill_manual(values=div_palette_gp_fun(12))+
+  theme(plot.title = element_text(size=10,face="bold"),axis.title.x=element_blank(),axis.text = element_text(size=8),axis.text.x = element_text(size=6,angle=90,hjust=1,vjust=0.5),strip.background=element_rect(fill=NA,),strip.text=element_text(size=12),axis.title=element_text(size=10,face="bold"),panel.spacing=unit(0.05, "cm"))+
+  guides(fill=FALSE,linetype=FALSE,colour=FALSE)
+
+
+
+gg<-ggplotly(gg_exit_activity, tooltip=c("text"))
+m <- list(
+    l = 30,
+    r = 30,
+    b = 30,
+    t = 50,
+    pad = 0
+  )
+
+gg<-layout(gg, dragmode = "zoom")%>%layout(legend = list(y=0.5,x=1.1,yanchor="middle",tracegroupgap = 0),hoverlabel=list(xanchor="left",yanchor="middle"))%>%style(textposition = "left", boxpoints = FALSE)
+
+gg$x$layout$showlegend<-FALSE
+
+gg
+
+```
+
+
+# Duration of Stay    {data-icon="fas fa-hourglass"}
+
+
+## Sidebar {data-width=400; .sidebar}
+
+
+**Duration of Stay** 
+
+- Time series data (top chart) are plotted as average (median) daily values (thick solid line). Thin solid inner lines contain 50% of all durations of stay per day; dashed lighter outer lines contain 90% of all durations of stay per day.
+
+- Breakdowns by day of week, time and day of week, kiosk and activity are plotted (bottom, tabbed) as average (median) values from the time series data (small data points, random variation added per point along the horizontal axis to better separate out the points). Large data points show the average (median) values per category, with darker error bars containing 50% of all durations of stay per category and lighter error bars containing 90% of all durations of stay per category.
+
+- From April/May 2021 onwards, average duration of stay fluctuated between around 105 minutes and 180 minutes. The time series data may indicate seasonality in the data - for example, a peak in duration in late August 2021 followed by a decline to early October 2021. 
+
+- Duration of stay by day of week appears similar, with average values all within approximately 15 minutes of one another. Duration of stay shows a strong negative association with entry time, with duration of stay declining from 9:00 onwards on all days. Duration of stay was around 15 minutes longer during holidays.
+
+- Individuals who paid for parking via the website tended to have longer durations of stay than those who paid via kiosks.
+
+- There were large variations in duration of stay by activity. Those doing biking plus cafe, walking plus play plus cafe and Go Ape stayed on average for three hours or more. Those going running or using the cafe only stayed for 90 minutes or less.
+
+## Row
+
+### Time series
+```{r stay ts,eval=TRUE,out.width="100%",out.heighth="50%", echo=FALSE,message = FALSE,warning=FALSE}
+
+gg_stay_ts<-ggplot(whinlatter_day_summary,aes(x=Entry_day ,y=median_stay,group=Type))+
+  theme_bw()+
+  geom_line(aes(y=lower05_stay,text=paste0(Entry_day," (",Entry_day_of_week,")","\nStay = ",lower05_stay," mins","\n(5% of cars stayed this long or less)")),colour=qual_palette[3],alpha=0.3,size=0.25,linetype=3)+
+  geom_line(aes(y=upper95_stay,text=paste0(Entry_day," (",Entry_day_of_week,")","\nStay = ",upper95_stay," mins","\n(95% of cars stayed this long or less)")),colour=qual_palette[3],alpha=0.3,size=0.25,linetype=3)+
+  geom_line(aes(y=lower25_stay,text=paste0(Entry_day," (",Entry_day_of_week,")","\nStay = ",lower25_stay," mins","\n(25% of cars stayed this long or less)")),colour=qual_palette[3],alpha=0.7,size=0.25,linetype=1)+
+  geom_line(aes(y=upper75_stay,text=paste0(Entry_day," (",Entry_day_of_week,")","\nStay = ",upper75_stay," mins","\n(75% of cars stayed this long or less)")),colour=qual_palette[3],alpha=0.7,size=0.25,linetype=1)+
+  geom_line(aes(text=paste0(Entry_day," (",Entry_day_of_week,")","\nStay = ",median_stay," mins","\n(50% of cars stayed this long or less)")),alpha=1,size=0.5,colour=qual_palette[3])+
+  geom_vline(aes(xintercept = as.numeric(as.Date("2021-04-01"))),linetype=2,colour="grey72",size=1)+
+  geom_line(aes(y=Holiday_num_dur,text="Holiday days"),alpha=0.5,colour="blue")+
+  labs(y="Minutes",x="Date")+
+  coord_cartesian(ylim=c(0,480),expand=FALSE)+
+  scale_y_continuous(breaks=seq(0,480,by=60))+
+  scale_x_date(date_breaks = "month",date_labels = "%d/%m/%Y")+
+  theme(plot.title = element_text(size=10,face="bold"),axis.title.x=element_blank(),axis.text = element_text(size=10),axis.text.x = element_text(size=8,angle=90,hjust=1,vjust=0.5),strip.background=element_rect(fill=NA,),strip.text=element_text(size=12),axis.title=element_text(size=10,face="bold"),panel.spacing=unit(0.05, "cm"))+
+  guides(fill=FALSE,linetype=FALSE)
+
+
+
+gg<-ggplotly(gg_stay_ts, tooltip=c("text"))
+m <- list(
+    l = 30,
+    r = 30,
+    b = 30,
+    t = 50,
+    pad = 0
+  )
+
+gg<-layout(gg, dragmode = "zoom")%>%layout(legend = list(y=0.5,x=1.1,yanchor="middle",tracegroupgap = 0),hoverlabel=list(xanchor="left",yanchor="middle"),annotations=list(x=18628+40,y=400,text="Excluded data", showarrow = FALSE,font=list(size=12,color="#808080")))%>%style(textposition = "left")
+
+gg
+
+```
+
+## Row {.tabset}
+
+### Breakdown by day of week
+```{r stay weekday,eval=TRUE, echo=FALSE,message = FALSE,warning=FALSE}
+
+gg_stay_weekday<-ggplot(filter(whinlatter_day_summary,Entry_integer>106),aes(x=as.integer(Entry_day_of_week) ,y=median_stay))+
+  theme_bw()+
+  #geom_jitter(aes(colour=Entry_day_of_week,text=paste0("Number of cars\non this day = ",Count)),alpha=0.3,size=0.25,width=0.2,height=0)+
+  geom_errorbar(data=whinlatter_weekday_summary, inherit.aes=FALSE,aes(x=as.integer(Entry_day_of_week),ymin=lower05_stay_weekday,ymax=upper95_stay_weekday,colour=Entry_day_of_week,group=Entry_day_of_week),width=0.5,alpha=0.3,size=0.25)+
+  geom_point(data=whinlatter_weekday_summary, inherit.aes=FALSE,aes(x=as.integer(Entry_day_of_week),y=lower05_stay_weekday,colour=Entry_day_of_week,group=Entry_day_of_week,text=paste0(Entry_day_of_week,"\nTime = ",round(whinlatter_weekday_summary$lower05_stay_weekday,0)," mins\n(5% of total sample)")),alpha=0,size=0)+
+  geom_point(data=whinlatter_weekday_summary, inherit.aes=FALSE,aes(x=as.integer(Entry_day_of_week),y=upper95_stay_weekday,colour=Entry_day_of_week,group=Entry_day_of_week,text=paste0(Entry_day_of_week,"\nTime = ",round(whinlatter_weekday_summary$upper95_stay_weekday,0)," mins\n(95% of total sample)")),alpha=0,size=0)+
+  geom_errorbar(data=whinlatter_weekday_summary, inherit.aes=FALSE,aes(x=as.integer(Entry_day_of_week),ymin=lower25_stay_weekday,ymax=upper75_stay_weekday,colour=Entry_day_of_week,group=Entry_day_of_week),width=0.5,alpha=1,size=0.25)+
+  geom_point(data=whinlatter_weekday_summary, inherit.aes=FALSE,aes(x=as.integer(Entry_day_of_week),y=lower25_stay_weekday,colour=Entry_day_of_week,group=Entry_day_of_week,text=paste0(Entry_day_of_week,"\nTime = ",round( whinlatter_weekday_summary$lower25_stay_weekday,0)," mins\n(25% of total sample)")),alpha=0,size=0)+
+  geom_point(data=whinlatter_weekday_summary, inherit.aes=FALSE,aes(x=as.integer(Entry_day_of_week),y=upper75_stay_weekday,colour=Entry_day_of_week,group=Entry_day_of_week,text=paste0(Entry_day_of_week,"\nTime = ",round(whinlatter_weekday_summary$upper75_stay_weekday,0)," mins\n(75% of total sample)")),alpha=0,size=0)+
+  geom_point(data=whinlatter_weekday_summary, inherit.aes=FALSE,aes(x=as.integer(Entry_day_of_week),y=median_stay_weekday,colour=Entry_day_of_week,group=Entry_day_of_week,text=paste0(Entry_day_of_week,"\nTime = ",round(median_stay_weekday,0)," mins\n(50% of total sample)")),alpha=1,size=2.5)+
+  labs(y="Time (mins)",x="Date")+
+  coord_cartesian(ylim=c(60,210),xlim=c(0.5,7.5),expand=FALSE)+
+  scale_x_continuous(breaks=seq(1,7,by=1),labels=levels(whinlatter_day_summary$Entry_day_of_week))+
+  scale_y_continuous(breaks=seq(90,180,by=30))+
+  scale_colour_manual(values=div_palette_gb_fun(7))+
+  scale_fill_manual(values=div_palette_gb_fun(7))+
+  theme(plot.title = element_text(size=10,face="bold"),axis.title.x=element_blank(),axis.text = element_text(size=8),strip.background=element_rect(fill=NA,),strip.text=element_text(size=12),axis.title=element_text(size=10,face="bold"),panel.spacing=unit(0.05, "cm"))+
+  guides(fill=FALSE,linetype=FALSE,colour=FALSE)
+
+
+
+gg<-ggplotly(gg_stay_weekday, tooltip=c("text"))
+m <- list(
+    l = 30,
+    r = 30,
+    b = 30,
+    t = 50,
+    pad = 0
+  )
+
+gg<-layout(gg, dragmode = "zoom")%>%layout(legend = list(y=0.5,x=1.1,yanchor="middle",tracegroupgap = 0),hoverlabel=list(xanchor="left",yanchor="middle"))%>%style(textposition = "left", boxpoints = FALSE)
+
+gg$x$layout$showlegend<-FALSE
+
+gg
+
+```
+
+### Breakdown by time and day of week
+```{r stay time,eval=TRUE, echo=FALSE,message = FALSE,warning=FALSE}
+
+gg_stay_weekday<-ggplot(filter(whinlatter_day_summary_plus_time,Entry_integer>106),aes(x=as.integer(Entry_day_of_week) ,y=median_stay))+
+  theme_bw()+
+  #geom_point(aes(colour=Entry_day_of_week,group=Entry_time_integer,text=paste0("Number of cars\non this day at this time = ",Count,"\nEntry Time = ",Entry_time_integer,":00")),alpha=0.3,size=0.25,position=position_jitterdodge(jitter.width=0.05,jitter.height = 0,dodge.width = 0.8))+
+  geom_errorbar(data=whinlatter_time_summary, inherit.aes=FALSE,aes(x=as.integer(Entry_day_of_week),y=median_stay,ymin=lower05_stay,ymax=upper95_stay ,colour=Entry_day_of_week,group=Entry_time_integer),width=0.5,alpha=0.3,size=0.25,position=position_jitterdodge(jitter.width=0,jitter.height = 0,dodge.width = 0.8))+
+  geom_point(data=whinlatter_time_summary, inherit.aes=FALSE,aes(x=as.integer(Entry_day_of_week),y=lower05_stay,colour=Entry_day_of_week,group=Entry_time_integer,text=paste0(Entry_day_of_week,"\nTime = ",round(whinlatter_time_summary$lower05_stay,0)," mins\n(5% of total sample)","\nEntry Time = ",Entry_time_integer,":00")),alpha=0,size=0,position=position_jitterdodge(jitter.width=0,jitter.height = 0,dodge.width = 0.8))+
+  geom_point(data=whinlatter_time_summary, inherit.aes=FALSE,aes(x=as.integer(Entry_day_of_week),y=upper95_stay,colour=Entry_day_of_week,group=Entry_time_integer,text=paste0(Entry_day_of_week,"\nTime = ",round(whinlatter_time_summary$upper95_stay,0)," mins\n(95% of total sample)","\nEntry Time = ",Entry_time_integer,":00")),alpha=0,size=0,position=position_jitterdodge(jitter.width=0,jitter.height = 0,dodge.width = 0.8))+
+  geom_errorbar(data=whinlatter_time_summary, inherit.aes=FALSE,aes(x=as.integer(Entry_day_of_week),y=median_stay,ymin=lower25_stay,ymax=upper75_stay,colour=Entry_day_of_week,group=Entry_time_integer),width=0.5,alpha=1,size=0.25,position=position_jitterdodge(jitter.width=0,jitter.height = 0,dodge.width = 0.8))+
+  geom_point(data=whinlatter_time_summary, inherit.aes=FALSE,aes(x=as.integer(Entry_day_of_week),y=lower25_stay,colour=Entry_day_of_week,group=Entry_time_integer,text=paste0(Entry_day_of_week,"\nTime = ",round( whinlatter_time_summary$lower25_stay,0)," mins\n(25% of total sample)","\nEntry Time = ",Entry_time_integer,":00")),alpha=0,size=0,position=position_jitterdodge(jitter.width=0,jitter.height = 0,dodge.width = 0.8))+
+  geom_point(data=whinlatter_time_summary, inherit.aes=FALSE,aes(x=as.integer(Entry_day_of_week),y=upper75_stay,colour=Entry_day_of_week,group=Entry_time_integer,text=paste0(Entry_day_of_week,"\nTime = ",round(whinlatter_time_summary$upper75_stay,0)," mins\n(75% of total sample)","\nEntry Time = ",Entry_time_integer,":00")),alpha=0,size=0,position=position_jitterdodge(jitter.width=0.1,jitter.height = 0,dodge.width = 0.8))+
+  geom_point(data=whinlatter_time_summary, inherit.aes=FALSE,aes(x=as.integer(Entry_day_of_week),y=median_stay,colour=Entry_day_of_week,group=Entry_time_integer,text=paste0(Entry_day_of_week,"\nTime = ",round(median_stay,0)," mins\n(50% of total sample)","\nEntry Time = ",Entry_time_integer,":00")),alpha=1,size=1.5,position=position_jitterdodge(jitter.width=0,jitter.height = 0,dodge.width = 0.8))+
+  labs(y="Time (mins)",x="Date")+
+  coord_cartesian(ylim=c(60,240),xlim=c(0.5,7.5),expand=FALSE)+
+  scale_x_continuous(breaks=seq(1,7,by=1),labels=levels(whinlatter_day_summary$Entry_day_of_week))+
+  scale_y_continuous(breaks=seq(90,240,by=30))+
+  scale_colour_manual(values=div_palette_gb_fun(7))+
+  scale_fill_manual(values=div_palette_gb_fun(7))+
+  theme(plot.title = element_text(size=10,face="bold"),axis.title.x=element_blank(),axis.text = element_text(size=8),strip.background=element_rect(fill=NA,),strip.text=element_text(size=12),axis.title=element_text(size=10,face="bold"),panel.spacing=unit(0.05, "cm"))+
+  guides(fill=FALSE,linetype=FALSE,colour=FALSE)
+
+
+
+gg<-ggplotly(gg_stay_weekday, tooltip=c("text"))
+m <- list(
+    l = 30,
+    r = 30,
+    b = 30,
+    t = 50,
+    pad = 0
+  )
+
+gg<-layout(gg, dragmode = "zoom")%>%layout(legend = list(y=0.5,x=1.1,yanchor="middle",tracegroupgap = 0),hoverlabel=list(xanchor="left",yanchor="middle"))%>%style(textposition = "left", boxpoints = FALSE)
+
+gg$x$layout$showlegend<-FALSE
+
+gg
+
+```
+
+### Breakdown by holiday day
+```{r stay hols,eval=TRUE, echo=FALSE,message = FALSE,warning=FALSE}
+
+gg_stay_holiday<-ggplot(filter(whinlatter_day_summary_plus_holiday,Entry_integer>106&!is.na(Holiday)),aes(x=as.integer(Holiday) ,y=median_stay))+
+  theme_bw()+
+  #geom_jitter(aes(colour=Holiday,text=paste0("Day = ",Entry_day_of_week,"\nNumber of cars\non this day = ",Count)),alpha=0.3,size=0.25,width=0.2,height=0)+
+  geom_errorbar(data=whinlatter_holiday_summary, inherit.aes=FALSE,aes(x=as.integer(Holiday ),ymin=lower05_stay_holiday,ymax=upper95_stay_holiday,colour=Holiday,group=Holiday),width=0.5,alpha=0.3,size=0.25)+
+  geom_point(data=whinlatter_holiday_summary, inherit.aes=FALSE,aes(x=as.integer(Holiday ),y=lower05_stay_holiday,colour=Holiday,group=Holiday,text=paste0(Holiday,"\nTime = ",round(lower05_stay_holiday,0)," mins","\n(5% of total sample)")),alpha=0,size=0)+
+  geom_point(data=whinlatter_holiday_summary, inherit.aes=FALSE,aes(x=as.integer(Holiday ),y=upper95_stay_holiday,colour=Holiday,group=Holiday,text=paste0(Holiday,"\nTime = ",round(upper95_stay_holiday,0)," mins","\n(95% of total sample)")),alpha=0,size=0)+
+  geom_errorbar(data=whinlatter_holiday_summary, inherit.aes=FALSE,aes(x=as.integer(Holiday),ymin=lower25_stay_holiday,ymax=upper75_stay_holiday,colour=Holiday,group=Holiday),width=0.5,alpha=1,size=0.25)+
+  geom_point(data=whinlatter_holiday_summary, inherit.aes=FALSE,aes(x=as.integer(Holiday),y=lower25_stay_holiday,colour=Holiday,group=Holiday,text=paste0(Holiday,"\nTime = ",round(lower25_stay_holiday,0)," mins","\n(25% of total sample)")),alpha=0,size=0)+
+  geom_point(data=whinlatter_holiday_summary, inherit.aes=FALSE,aes(x=as.integer(Holiday),y=upper75_stay_holiday,colour=Holiday,group=Holiday,text=paste0(Holiday,"\nTime = ",round(upper75_stay_holiday,0)," mins","\n(75% of total sample)")),alpha=0,size=0)+
+  geom_point(data=whinlatter_holiday_summary, inherit.aes=FALSE,aes(x=as.integer(Holiday),y=median_stay_holiday,colour=Holiday,group=Holiday,text=paste0(Holiday,"\nTime = ",round(median_stay_holiday,0)," mins","\n(50% of total sample)")),alpha=1,size=2.5)+
+  labs(y="Time",x="Date")+
+  coord_cartesian(ylim=c(60,210),xlim=c(0.5,2.5),expand=FALSE)+
+  scale_x_continuous(breaks=seq(1,2,by=1),labels=levels(whinlatter_day_summary_plus_holiday$Holiday))+
+  scale_y_continuous(breaks=seq(90,180,by=30))+
+  scale_colour_manual(values=div_palette_gbr_fun(2))+
+  scale_fill_manual(values=div_palette_gbr_fun(2))+
+  theme(plot.title = element_text(size=10,face="bold"),axis.title.x=element_blank(),axis.text = element_text(size=8),strip.background=element_rect(fill=NA,),strip.text=element_text(size=12),axis.title=element_text(size=10,face="bold"),panel.spacing=unit(0.05, "cm"))+
+  guides(fill=FALSE,linetype=FALSE,colour=FALSE)
+
+
+
+gg<-ggplotly(gg_stay_holiday, tooltip=c("text"))
+m <- list(
+    l = 100,
+    r = 100,
+    b = 30,
+    t = 50,
+    pad = 0
+  )
+
+gg<-layout(gg, dragmode = "zoom")%>%layout(legend = list(y=0.5,x=1.1,yanchor="middle",tracegroupgap = 0),hoverlabel=list(xanchor="left",yanchor="middle"))%>%style(textposition = "left", boxpoints = FALSE)
+
+gg$x$layout$showlegend<-FALSE
+
+gg
+
+```
+
+
+
+### Breakdown by kiosk
+```{r stay kiosk,eval=TRUE, echo=FALSE,message = FALSE,warning=FALSE}
+
+gg_stay_kiosk<-ggplot(filter(whinlatter_day_summary_plus_kiosk,Entry_integer>106&!is.na(Payment_Source)),aes(x=as.integer(Payment_Source) ,y=median_stay))+
+  theme_bw()+
+  #geom_jitter(aes(colour=Payment_Source,text=paste0("Day = ",Entry_day_of_week,"\nNumber of cars\non this day\nat this kiosk = ",Count)),alpha=0.3,size=0.25,width=0.2,height=0)+
+  geom_errorbar(data=whinlatter_kiosk_summary, inherit.aes=FALSE,aes(x=as.integer(Payment_Source ),ymin=lower05_stay_kiosk,ymax=upper95_stay_kiosk,colour=Payment_Source,group=Payment_Source),width=0.5,alpha=0.3,size=0.25)+
+    geom_point(data=whinlatter_kiosk_summary, inherit.aes=FALSE,aes(x=as.integer(Payment_Source ),y=lower05_stay_kiosk,colour=Payment_Source,group=Payment_Source,text=paste0(Payment_Source,"\nTime = ",round(lower05_stay_kiosk,0)," mins","\n(5% of total sample)")),alpha=0,size=0)+
+  geom_point(data=whinlatter_kiosk_summary, inherit.aes=FALSE,aes(x=as.integer(Payment_Source ),y=upper95_stay_kiosk,colour=Payment_Source,group=Payment_Source,text=paste0(Payment_Source,"\nTime = ",round(upper95_stay_kiosk,0)," mins","\n(95% of total sample)")),alpha=0,size=0)+
+  geom_errorbar(data=whinlatter_kiosk_summary, inherit.aes=FALSE,aes(x=as.integer(Payment_Source),ymin=lower25_stay_kiosk,ymax=upper75_stay_kiosk,colour=Payment_Source,group=Payment_Source),width=0.5,alpha=1,size=0.25)+
+  geom_point(data=whinlatter_kiosk_summary, inherit.aes=FALSE,aes(x=as.integer(Payment_Source),y=lower25_stay_kiosk,colour=Payment_Source,group=Payment_Source,text=paste0(Payment_Source,"\nTime = ",round(lower25_stay_kiosk,0)," mins","\n(25% of total sample)")),alpha=0,size=0)+
+  geom_point(data=whinlatter_kiosk_summary, inherit.aes=FALSE,aes(x=as.integer(Payment_Source),y=upper75_stay_kiosk,colour=Payment_Source,group=Payment_Source,text=paste0(Payment_Source,"\nTime = ",round(upper75_stay_kiosk,0)," mins","\n(75% of total sample)")),alpha=0,size=0)+
+  geom_point(data=whinlatter_kiosk_summary, inherit.aes=FALSE,aes(x=as.integer(Payment_Source),y=median_stay_kiosk,colour=Payment_Source,group=Payment_Source,text=paste0(Payment_Source,"\nTime = ",round(median_stay_kiosk,0)," mins","\n(50% of total sample)")),alpha=1,size=2.5)+
+  labs(y="Time",x="Date")+
+  coord_cartesian(ylim=c(60,210),xlim=c(0.5,6.5),expand=FALSE)+
+  scale_x_continuous(breaks=seq(1,6,by=1),labels=levels(whinlatter_day_summary_plus_kiosk$Payment_Source))+
+  scale_y_continuous(breaks=seq(90,180,by=30))+
+  scale_colour_manual(values=div_palette_gr_fun(6))+
+  scale_fill_manual(values=div_palette_gr_fun(6))+
+  theme(plot.title = element_text(size=10,face="bold"),axis.title.x=element_blank(),axis.text = element_text(size=8),strip.background=element_rect(fill=NA,),strip.text=element_text(size=12),axis.title=element_text(size=10,face="bold"),panel.spacing=unit(0.05, "cm"))+
+  guides(fill=FALSE,linetype=FALSE,colour=FALSE)
+
+
+
+gg<-ggplotly(gg_stay_kiosk, tooltip=c("text"))
+m <- list(
+    l = 30,
+    r = 30,
+    b = 30,
+    t = 50,
+    pad = 0
+  )
+
+gg<-layout(gg, dragmode = "zoom")%>%layout(legend = list(y=0.5,x=1.1,yanchor="middle",tracegroupgap = 0),hoverlabel=list(xanchor="left",yanchor="middle"))%>%style(textposition = "left", boxpoints = FALSE)
+
+gg$x$layout$showlegend<-FALSE
+
+gg
+
+```
+
+
+### Breakdown by activity
+```{r stay activity,out.width="50%",out.heighth="50%",eval=TRUE, echo=FALSE,message = FALSE,warning=FALSE}
+
+gg_stay_activity<-ggplot(filter(whinlatter_day_summary_plus_activity,Entry_integer>106&!is.na(All_Activities_Refined)),aes(x=as.integer(All_Activities_Refined) ,y=median_stay))+
+  theme_bw()+
+  #geom_jitter(aes(colour=All_Activities_Refined,text=paste0("Day = ",Entry_day_of_week,"\nNumber of cars\non this day\ndoing this activity combo = ",Count)),alpha=0.3,size=0.25,width=0.2,height=0)+
+  geom_errorbar(data=whinlatter_activity_summary, inherit.aes=FALSE,aes(x=as.integer(All_Activities_Refined ),ymin=lower05_stay_activity,ymax=upper95_stay_activity,colour=All_Activities_Refined,group=All_Activities_Refined),width=0.5,alpha=0.3,size=0.25)+
+  geom_point(data=whinlatter_activity_summary, inherit.aes=FALSE,aes(x=as.integer(All_Activities_Refined ),y=lower05_stay_activity,colour=All_Activities_Refined,group=All_Activities_Refined,text=paste0(All_Activities_Refined,"\nTime = ",round(lower05_stay_activity,0)," mins","\n(5% of total sample)")),alpha=0,size=0)+
+  geom_point(data=whinlatter_activity_summary, inherit.aes=FALSE,aes(x=as.integer(All_Activities_Refined ),y=upper95_stay_activity,colour=All_Activities_Refined,group=All_Activities_Refined,text=paste0(All_Activities_Refined,"\nTime = ",round(upper95_stay_activity,0)," mins","\n(95% of total sample)")),alpha=0,size=0)+
+  geom_errorbar(data=whinlatter_activity_summary, inherit.aes=FALSE,aes(x=as.integer(All_Activities_Refined),ymin=lower25_stay_activity,ymax=upper75_stay_activity,colour=All_Activities_Refined,group=All_Activities_Refined),width=0.5,alpha=1,size=0.25)+
+  geom_point(data=whinlatter_activity_summary, inherit.aes=FALSE,aes(x=as.integer(All_Activities_Refined),y=lower25_stay_activity,colour=All_Activities_Refined,group=All_Activities_Refined,text=paste0(All_Activities_Refined,"\nTime = ",round(lower25_stay_activity,0)," mins","\n(25% of total sample)")),alpha=0,size=0)+
+  geom_point(data=whinlatter_activity_summary, inherit.aes=FALSE,aes(x=as.integer(All_Activities_Refined),y=upper75_stay_activity,colour=All_Activities_Refined,group=All_Activities_Refined,text=paste0(All_Activities_Refined,"\nTime = ",round(upper75_stay_activity,0)," mins","\n(75% of total sample)")),alpha=0,size=0)+
+  geom_point(data=whinlatter_activity_summary, inherit.aes=FALSE,aes(x=as.integer(All_Activities_Refined),y=median_stay_activity,colour=All_Activities_Refined,group=All_Activities_Refined,text=paste0(All_Activities_Refined,"\nTime = ",round(median_stay_activity,0)," mins","\n(50% of total sample)")),alpha=1,size=2.5)+
+  labs(y="Time",x="Date")+
+  coord_cartesian(ylim=c(30,270),xlim=c(0.5,12.5),expand=FALSE)+
+  scale_x_continuous(breaks=seq(1,12,by=1),labels=levels(whinlatter_day_summary_plus_activity$All_Activities_Refined))+
+  scale_y_continuous(breaks=seq(30,370,by=30))+
+  scale_colour_manual(values=div_palette_gp_fun(12))+
+  scale_fill_manual(values=div_palette_gp_fun(12))+
+  theme(plot.title = element_text(size=10,face="bold"),axis.title.x=element_blank(),axis.text = element_text(size=8),axis.text.x = element_text(size=6,angle=90,hjust=1,vjust=0.5),strip.background=element_rect(fill=NA,),strip.text=element_text(size=12),axis.title=element_text(size=10,face="bold"),panel.spacing=unit(0.05, "cm"))+
+  guides(fill=FALSE,linetype=FALSE,colour=FALSE)
+
+
+
+gg<-ggplotly(gg_stay_activity, tooltip=c("text"))
+m <- list(
+    l = 30,
+    r = 30,
+    b = 30,
+    t = 50,
+    pad = 0
+  )
+
+gg<-layout(gg, dragmode = "zoom")%>%layout(legend = list(y=0.5,x=1.1,yanchor="middle",tracegroupgap = 0),hoverlabel=list(xanchor="left",yanchor="middle"))%>%style(textposition = "left", boxpoints = FALSE)
+
+gg$x$layout$showlegend<-FALSE
+
+gg
+
+```
+
+# Number of Visits (Cars)    {data-icon="fas fa-car"}
+
+## Sidebar {data-width=400; .sidebar}
+
+
+**Number of Visits (Cars)** 
+
+- Time series data (top) are plotted as total daily values (line).
+
+- Breakdowns by day of week, time and day of week, kiosk and activity are plotted (bottom, tabbed) as average (median) daily values (small data points, random variation added per point along the horizontal axis to better separate out the points). Large data points show the average (median) values per category, with darker error bars containing 50% of all counts per category and lighter error bars containing 90% of all counts per category.
+
+- From April/May 2021 onwards, number of cars per day fluctuated widely, with an apparent weekly and longer term seasonal trend. The major peak appears to align with the end of August 2021, with an equally high but shorter peak at the end of May 2021. A smaller peak is apparent is late October 2021.
+
+- Number of visits by day show a clear pattern, with weekends having a greater number of cars than week days. The patterns by time of day are consistent, with peak entry times between 10:00 and 11:00. There were more than 150 extra visits per day on holiday versus non-holiday days. 
+
+- Kiosks 1-3 accounted for the majority of recorded visits, with kiosk 2 having a much larger average number of recorded cars than the other two.
+
+- The most likely three activities by number of cars were "none", walking and biking, accounting for 173 cars per day on average.
+
+## Row
+
+### Time series
+```{r count ts,eval=TRUE,out.width="100%",out.heighth="50%",echo=FALSE,message = FALSE,warning=FALSE}
+
+gg_count_ts<-ggplot(whinlatter_day_summary,aes(x=Entry_day ,y=Count,group=Type))+
+  theme_bw()+
+  geom_line(aes(text=paste0(Entry_day," (",Entry_day_of_week,")","\nCount = ",round(Count,0)," cars")),alpha=1,size=0.5,colour=qual_palette[4])+
+  geom_vline(aes(xintercept = as.numeric(as.Date("2021-04-01"))),linetype=2,colour="grey72",size=1)+
+  geom_line(aes(y=Holiday_num_count,text="Holiday days"),alpha=0.5,colour="blue")+
+  labs(y="Number of cars",x="Date")+
+  coord_cartesian(ylim=c(-20,500),expand=FALSE)+
+  scale_y_continuous(breaks=seq(0,500,by=100))+
+  scale_x_date(date_breaks = "month",date_labels = "%d/%m/%Y")+
+  theme(plot.title = element_text(size=10,face="bold"),axis.title.x=element_blank(),axis.text = element_text(size=8),axis.text.x = element_text(size=6,angle=90,hjust=1,vjust=0.5),strip.background=element_rect(fill=NA,),strip.text=element_text(size=12),axis.title=element_text(size=10,face="bold"),panel.spacing=unit(0.05, "cm"))+
+  guides(fill=FALSE,linetype=FALSE)
+
+
+
+gg<-ggplotly(gg_count_ts, tooltip=c("text"))
+m <- list(
+    l = 30,
+    r = 30,
+    b = 30,
+    t = 50,
+    pad = 0
+  )
+
+gg<-layout(gg, dragmode = "zoom")%>%layout(legend = list(y=0.5,x=1.1,yanchor="middle",tracegroupgap = 0),hoverlabel=list(xanchor="left",yanchor="middle"),annotations=list(x=18628+40,y=400,text="Excluded data", showarrow = FALSE,font=list(size=12,color="#808080")))%>%style(textposition = "left")
+
+gg
+
+```
+
+## Row {.tabset}
+
+### Breakdown by day of week
+```{r count weekday,eval=TRUE, echo=FALSE,message = FALSE,warning=FALSE}
+
+gg_Count_weekday<-ggplot(filter(whinlatter_day_summary,Entry_integer>106),aes(x=as.integer(Entry_day_of_week) ,y=Count))+
+  theme_bw()+
+  #geom_jitter(aes(colour=Entry_day_of_week,text=paste0("Number of cars\non this day = ",Count)),alpha=0.3,size=0.25,width=0.2,height=0)+
+  geom_errorbar(data=whinlatter_weekday_summary, inherit.aes=FALSE,aes(x=as.integer(Entry_day_of_week),ymin=lower05_Count_weekday,ymax=upper95_Count_weekday,colour=Entry_day_of_week,group=Entry_day_of_week),width=0.5,alpha=0.3,size=0.25)+
+  geom_point(data=whinlatter_weekday_summary, inherit.aes=FALSE,aes(x=as.integer(Entry_day_of_week),y=lower05_Count_weekday,colour=Entry_day_of_week,group=Entry_day_of_week,text=paste0(Entry_day_of_week,"\n",round(lower05_Count_weekday,0)," cars","\n(5% of total sample)")),alpha=0,size=0)+
+  geom_point(data=whinlatter_weekday_summary, inherit.aes=FALSE,aes(x=as.integer(Entry_day_of_week),y=upper95_Count_weekday,colour=Entry_day_of_week,group=Entry_day_of_week,text=paste0(Entry_day_of_week,"\n",round(upper95_Count_weekday,0)," cars","\n(95% of total sample)")),alpha=0,size=0)+
+  geom_errorbar(data=whinlatter_weekday_summary, inherit.aes=FALSE,aes(x=as.integer(Entry_day_of_week),ymin=lower25_Count_weekday,ymax=upper75_Count_weekday,colour=Entry_day_of_week,group=Entry_day_of_week),width=0.5,alpha=1,size=0.25)+
+  geom_point(data=whinlatter_weekday_summary, inherit.aes=FALSE,aes(x=as.integer(Entry_day_of_week),y=lower25_Count_weekday,colour=Entry_day_of_week,group=Entry_day_of_week,text=paste0(Entry_day_of_week,"\n",round(lower25_Count_weekday,0)," cars","\n(25% of total sample)")),alpha=0,size=0)+
+  geom_point(data=whinlatter_weekday_summary, inherit.aes=FALSE,aes(x=as.integer(Entry_day_of_week),y=upper75_Count_weekday,colour=Entry_day_of_week,group=Entry_day_of_week,text=paste0(Entry_day_of_week,"\n",round(upper75_Count_weekday,0)," cars","\n(75% of total sample)")),alpha=0,size=0)+
+  geom_point(data=whinlatter_weekday_summary, inherit.aes=FALSE,aes(x=as.integer(Entry_day_of_week),y=median_Count_weekday,colour=Entry_day_of_week,group=Entry_day_of_week,text=paste0(Entry_day_of_week,"\n",round(median_Count_weekday,0)," cars","\n(50% of total sample)")),alpha=1,size=2.5)+
+  labs(y="Number of cars",x="Date")+
+  coord_cartesian(ylim=c(0,500),xlim=c(0.5,7.5),expand=FALSE)+
+  scale_x_continuous(breaks=seq(1,7,by=1),labels=levels(whinlatter_day_summary$Entry_day_of_week))+
+  scale_y_continuous(breaks=seq(0,500,by=100))+
+  scale_colour_manual(values=div_palette_gb_fun(7))+
+  scale_fill_manual(values=div_palette_gb_fun(7))+
+  theme(plot.title = element_text(size=10,face="bold"),axis.title.x=element_blank(),axis.text = element_text(size=8),strip.background=element_rect(fill=NA,),strip.text=element_text(size=12),axis.title=element_text(size=10,face="bold"),panel.spacing=unit(0.05, "cm"))+
+  guides(fill=FALSE,linetype=FALSE,colour=FALSE)
+
+
+
+gg<-ggplotly(gg_Count_weekday, tooltip=c("text"))
+m <- list(
+    l = 30,
+    r = 30,
+    b = 30,
+    t = 50,
+    pad = 0
+  )
+
+gg<-layout(gg, dragmode = "zoom")%>%layout(legend = list(y=0.5,x=1.1,yanchor="middle",tracegroupgap = 0),hoverlabel=list(xanchor="left",yanchor="middle"))%>%style(textposition = "left", boxpoints = FALSE)
+
+gg$x$layout$showlegend<-FALSE
+
+gg
+
+```
+
+
+### Breakdown by time and day of week
+```{r count time,eval=TRUE, echo=FALSE,message = FALSE,warning=FALSE}
+
+gg_stay_weekday<-ggplot(filter(whinlatter_day_summary_plus_time,Entry_integer>106),aes(x=as.integer(Entry_day_of_week) ,y=Count))+
+  theme_bw()+
+  #geom_point(aes(colour=Entry_day_of_week,group=Entry_time_integer,text=paste0("Number of cars\non this day = ",Count,"\nEntry Time = ",Entry_time_integer,":00")),alpha=0.3,size=0.25,position=position_jitterdodge(jitter.width=0.05,jitter.height = 0,dodge.width = 0.8))+
+  geom_errorbar(data=whinlatter_time_summary, inherit.aes=FALSE,aes(x=as.integer(Entry_day_of_week),y=median_count,ymin=lower05_count,ymax=upper95_count ,colour=Entry_day_of_week,group=Entry_time_integer),width=0.5,alpha=0.3,size=0.25,position=position_jitterdodge(jitter.width=0,jitter.height = 0,dodge.width = 0.8))+
+  geom_point(data=whinlatter_time_summary, inherit.aes=FALSE,aes(x=as.integer(Entry_day_of_week),y=lower05_count,colour=Entry_day_of_week,group=Entry_time_integer,text=paste0(Entry_day_of_week,"\n",round(whinlatter_time_summary$lower05_count,0)," cars\n(5% of total sample)","\nEntry Time = ",Entry_time_integer,":00")),alpha=0,size=0,position=position_jitterdodge(jitter.width=0,jitter.height = 0,dodge.width = 0.8))+
+  geom_point(data=whinlatter_time_summary, inherit.aes=FALSE,aes(x=as.integer(Entry_day_of_week),y=upper95_count,colour=Entry_day_of_week,group=Entry_time_integer,text=paste0(Entry_day_of_week,"\n",round(whinlatter_time_summary$upper95_count,0)," cars\n(95% of total sample)","\nEntry Time = ",Entry_time_integer,":00")),alpha=0,size=0,position=position_jitterdodge(jitter.width=0,jitter.height = 0,dodge.width = 0.8))+
+  geom_errorbar(data=whinlatter_time_summary, inherit.aes=FALSE,aes(x=as.integer(Entry_day_of_week),y=median_count,ymin=lower25_count,ymax=upper75_count,colour=Entry_day_of_week,group=Entry_time_integer),width=0.5,alpha=1,size=0.25,position=position_jitterdodge(jitter.width=0,jitter.height = 0,dodge.width = 0.8))+
+  geom_point(data=whinlatter_time_summary, inherit.aes=FALSE,aes(x=as.integer(Entry_day_of_week),y=lower25_count,colour=Entry_day_of_week,group=Entry_time_integer,text=paste0(Entry_day_of_week,"\n",round( whinlatter_time_summary$lower25_count,0)," cars\n(25% of total sample)","\nEntry Time = ",Entry_time_integer,":00")),alpha=0,size=0,position=position_jitterdodge(jitter.width=0,jitter.height = 0,dodge.width = 0.8))+
+  geom_point(data=whinlatter_time_summary, inherit.aes=FALSE,aes(x=as.integer(Entry_day_of_week),y=upper75_count,colour=Entry_day_of_week,group=Entry_time_integer,text=paste0(Entry_day_of_week,"\n",round(whinlatter_time_summary$upper75_count,0)," cars\n(75% of total sample)","\nEntry Time = ",Entry_time_integer,":00")),alpha=0,size=0,position=position_jitterdodge(jitter.width=0.1,jitter.height = 0,dodge.width = 0.8))+
+  geom_point(data=whinlatter_time_summary, inherit.aes=FALSE,aes(x=as.integer(Entry_day_of_week),y=median_count,colour=Entry_day_of_week,group=Entry_time_integer,text=paste0(Entry_day_of_week,"\n",round(median_count,0)," cars\n(50% of total sample)","\nEntry Time = ",Entry_time_integer,":00")),alpha=1,size=1.5,position=position_jitterdodge(jitter.width=0,jitter.height = 0,dodge.width = 0.8))+
+  labs(y="Number of cars",x="Date")+
+  coord_cartesian(ylim=c(0,150),xlim=c(0.5,7.5),expand=FALSE)+
+  scale_x_continuous(breaks=seq(1,7,by=1),labels=levels(whinlatter_day_summary$Entry_day_of_week))+
+  scale_y_continuous(breaks=seq(0,150,by=25))+
+  scale_colour_manual(values=div_palette_gb_fun(7))+
+  scale_fill_manual(values=div_palette_gb_fun(7))+
+  theme(plot.title = element_text(size=10,face="bold"),axis.title.x=element_blank(),axis.text = element_text(size=8),strip.background=element_rect(fill=NA,),strip.text=element_text(size=12),axis.title=element_text(size=10,face="bold"),panel.spacing=unit(0.05, "cm"))+
+  guides(fill=FALSE,linetype=FALSE,colour=FALSE)
+
+
+
+gg<-ggplotly(gg_stay_weekday, tooltip=c("text"))
+m <- list(
+    l = 30,
+    r = 30,
+    b = 30,
+    t = 50,
+    pad = 0
+  )
+
+gg<-layout(gg, dragmode = "zoom")%>%layout(legend = list(y=0.5,x=1.1,yanchor="middle",tracegroupgap = 0),hoverlabel=list(xanchor="left",yanchor="middle"))%>%style(textposition = "left", boxpoints = FALSE)
+
+gg$x$layout$showlegend<-FALSE
+
+gg
+
+```
+
+### Breakdown by holiday day
+```{r count holiday,eval=TRUE, echo=FALSE,message = FALSE,warning=FALSE}
+
+gg_Count_holiday<-ggplot(filter(whinlatter_day_summary_plus_holiday,Entry_integer>106&!is.na(Holiday)),aes(x=as.integer(Holiday) ,y=Count))+
+  theme_bw()+
+  #geom_jitter(aes(colour=Holiday,text=paste0("Day = ",Entry_day_of_week,"\nNumber of cars\non this day\nat this holiday = ",Count)),alpha=0.3,size=0.25,width=0.2,height=0)+
+  geom_errorbar(data=whinlatter_holiday_summary, inherit.aes=FALSE,aes(x=as.integer(Holiday ),ymin=lower05_Count_holiday,ymax=upper95_Count_holiday,colour=Holiday,group=Holiday),width=0.5,alpha=0.3,size=0.25)+
+  geom_point(data=whinlatter_holiday_summary, inherit.aes=FALSE,aes(x=as.integer(Holiday ),y=lower05_Count_holiday,colour=Holiday,group=Holiday,text=paste0(Holiday,"\n",round(lower05_Count_holiday,0)," cars","\n(5% of total sample)")),alpha=0,size=0)+
+  geom_point(data=whinlatter_holiday_summary, inherit.aes=FALSE,aes(x=as.integer(Holiday ),y=upper95_Count_holiday,colour=Holiday,group=Holiday,text=paste0(Holiday,"\n",round(upper95_Count_holiday,0)," cars","\n(95% of total sample)")),alpha=0,size=0)+
+  geom_errorbar(data=whinlatter_holiday_summary, inherit.aes=FALSE,aes(x=as.integer(Holiday),ymin=lower25_Count_holiday,ymax=upper75_Count_holiday,colour=Holiday,group=Holiday),width=0.5,alpha=1,size=0.25)+
+  geom_point(data=whinlatter_holiday_summary, inherit.aes=FALSE,aes(x=as.integer(Holiday),y=lower25_Count_holiday,colour=Holiday,group=Holiday,text=paste0(Holiday,"\n",round(lower25_Count_holiday,0)," cars","\n(25% of total sample)")),alpha=0,size=0)+
+  geom_point(data=whinlatter_holiday_summary, inherit.aes=FALSE,aes(x=as.integer(Holiday),y=upper75_Count_holiday,colour=Holiday,group=Holiday,text=paste0(Holiday,"\n",round(upper75_Count_holiday,0)," cars","\n(75% of total sample)")),alpha=0,size=0)+
+  geom_point(data=whinlatter_holiday_summary, inherit.aes=FALSE,aes(x=as.integer(Holiday),y=median_Count_holiday,colour=Holiday,group=Holiday,text=paste0(Holiday,"\n",round(median_Count_holiday,0)," cars","\n(50% of total sample)")),alpha=1,size=2.5)+
+  labs(y="Number of cars",x="Date")+
+  coord_cartesian(ylim=c(-20,500),xlim=c(0.5,2.5),expand=FALSE)+
+  scale_x_continuous(breaks=seq(1,2,by=1),labels=levels(whinlatter_day_summary_plus_holiday$Holiday))+
+  scale_y_continuous(breaks=seq(0,500,by=100))+
+  scale_colour_manual(values=div_palette_gbr_fun(2))+
+  scale_fill_manual(values=div_palette_gbr_fun(2))+
+  theme(plot.title = element_text(size=10,face="bold"),axis.title.x=element_blank(),axis.text = element_text(size=8),strip.background=element_rect(fill=NA,),strip.text=element_text(size=12),axis.title=element_text(size=10,face="bold"),panel.spacing=unit(0.05, "cm"))+
+  guides(fill=FALSE,linetype=FALSE,colour=FALSE)
+
+
+
+gg<-ggplotly(gg_Count_holiday, tooltip=c("text"))
+m <- list(
+    l = 100,
+    r = 100,
+    b = 30,
+    t = 50,
+    pad = 0
+  )
+
+gg<-layout(gg, dragmode = "zoom")%>%layout(legend = list(y=0.5,x=1.1,yanchor="middle",tracegroupgap = 0),hoverlabel=list(xanchor="left",yanchor="middle"))%>%style(textposition = "left", boxpoints = FALSE)
+
+gg$x$layout$showlegend<-FALSE
+
+gg
+
+```
+
+
+### Breakdown by kiosk
+```{r count kiosk,eval=TRUE, echo=FALSE,message = FALSE,warning=FALSE}
+
+gg_Count_kiosk<-ggplot(filter(whinlatter_day_summary_plus_kiosk,Entry_integer>106&!is.na(Payment_Source)),aes(x=as.integer(Payment_Source) ,y=Count))+
+  theme_bw()+
+  #geom_jitter(aes(colour=Payment_Source,text=paste0("Day = ",Entry_day_of_week,"\nNumber of cars\non this day\nat this kiosk = ",Count)),alpha=0.3,size=0.25,width=0.2,height=0)+
+  geom_errorbar(data=whinlatter_kiosk_summary, inherit.aes=FALSE,aes(x=as.integer(Payment_Source ),ymin=lower05_Count_kiosk,ymax=upper95_Count_kiosk,colour=Payment_Source,group=Payment_Source),width=0.5,alpha=0.3,size=0.25)+
+  geom_point(data=whinlatter_kiosk_summary, inherit.aes=FALSE,aes(x=as.integer(Payment_Source ),y=lower05_Count_kiosk,colour=Payment_Source,group=Payment_Source,text=paste0(Payment_Source,"\n",round(lower05_Count_kiosk,0)," cars","\n(5% of total sample)")),alpha=0,size=0)+
+  geom_point(data=whinlatter_kiosk_summary, inherit.aes=FALSE,aes(x=as.integer(Payment_Source ),y=upper95_Count_kiosk,colour=Payment_Source,group=Payment_Source,text=paste0(Payment_Source,"\n",round(upper95_Count_kiosk,0)," cars","\n(95% of total sample)")),alpha=0,size=0)+
+  geom_errorbar(data=whinlatter_kiosk_summary, inherit.aes=FALSE,aes(x=as.integer(Payment_Source),ymin=lower25_Count_kiosk,ymax=upper75_Count_kiosk,colour=Payment_Source,group=Payment_Source),width=0.5,alpha=1,size=0.25)+
+  geom_point(data=whinlatter_kiosk_summary, inherit.aes=FALSE,aes(x=as.integer(Payment_Source),y=lower25_Count_kiosk,colour=Payment_Source,group=Payment_Source,text=paste0(Payment_Source,"\n",round(lower25_Count_kiosk,0)," cars","\n(25% of total sample)")),alpha=0,size=0)+
+  geom_point(data=whinlatter_kiosk_summary, inherit.aes=FALSE,aes(x=as.integer(Payment_Source),y=upper75_Count_kiosk,colour=Payment_Source,group=Payment_Source,text=paste0(Payment_Source,"\n",round(upper75_Count_kiosk,0)," cars","\n(75% of total sample)")),alpha=0,size=0)+
+  geom_point(data=whinlatter_kiosk_summary, inherit.aes=FALSE,aes(x=as.integer(Payment_Source),y=median_Count_kiosk,colour=Payment_Source,group=Payment_Source,text=paste0(Payment_Source,"\n",round(median_Count_kiosk,0)," cars","\n(50% of total sample)")),alpha=1,size=2.5)+
+  labs(y="Number of cars",x="Date")+
+  coord_cartesian(ylim=c(-20,300),xlim=c(0.5,6.5),expand=FALSE)+
+  scale_x_continuous(breaks=seq(1,6,by=1),labels=levels(whinlatter_day_summary_plus_kiosk$Payment_Source))+
+  scale_y_continuous(breaks=seq(0,300,by=100))+
+  scale_colour_manual(values=div_palette_gr_fun(6))+
+  scale_fill_manual(values=div_palette_gr_fun(6))+
+  theme(plot.title = element_text(size=10,face="bold"),axis.title.x=element_blank(),axis.text = element_text(size=8),strip.background=element_rect(fill=NA,),strip.text=element_text(size=12),axis.title=element_text(size=10,face="bold"),panel.spacing=unit(0.05, "cm"))+
+  guides(fill=FALSE,linetype=FALSE,colour=FALSE)
+
+
+
+gg<-ggplotly(gg_Count_kiosk, tooltip=c("text"))
+m <- list(
+    l = 30,
+    r = 30,
+    b = 30,
+    t = 50,
+    pad = 0
+  )
+
+gg<-layout(gg, dragmode = "zoom")%>%layout(legend = list(y=0.5,x=1.1,yanchor="middle",tracegroupgap = 0),hoverlabel=list(xanchor="left",yanchor="middle"))%>%style(textposition = "left", boxpoints = FALSE)
+
+gg$x$layout$showlegend<-FALSE
+
+gg
+
+```
+
+
+### Breakdown by activity
+```{r count activity,out.width="50%",out.heighth="50%",eval=TRUE, echo=FALSE,message = FALSE,warning=FALSE}
+
+gg_Count_activity<-ggplot(filter(whinlatter_day_summary_plus_activity,Entry_integer>106&!is.na(All_Activities_Refined)),aes(x=as.integer(All_Activities_Refined) ,y=Count))+
+  theme_bw()+
+  #geom_jitter(aes(colour=All_Activities_Refined,text=paste0("Day = ",Entry_day_of_week,"\nNumber of cars\non this day\ndoing this activity combo = ",Count)),alpha=0.3,size=0.25,width=0.2,height=0)+
+  geom_errorbar(data=whinlatter_activity_summary, inherit.aes=FALSE,aes(x=as.integer(All_Activities_Refined ),ymin=lower05_Count_activity,ymax=upper95_Count_activity,colour=All_Activities_Refined,group=All_Activities_Refined),width=0.5,alpha=0.3,size=0.25)+
+  geom_point(data=whinlatter_activity_summary, inherit.aes=FALSE,aes(x=as.integer(All_Activities_Refined ),y=lower05_Count_activity,colour=All_Activities_Refined,group=All_Activities_Refined,text=paste0(All_Activities_Refined,"\n",round(lower05_Count_activity,0)," cars","\n(5% of total sample)")),alpha=0,size=0)+
+  geom_point(data=whinlatter_activity_summary, inherit.aes=FALSE,aes(x=as.integer(All_Activities_Refined ),y=upper95_Count_activity,colour=All_Activities_Refined,group=All_Activities_Refined,text=paste0(All_Activities_Refined,"\n",round(upper95_Count_activity,0)," cars","\n(95% of total sample)")),alpha=0,size=0)+
+  geom_errorbar(data=whinlatter_activity_summary, inherit.aes=FALSE,aes(x=as.integer(All_Activities_Refined),ymin=lower25_Count_activity,ymax=upper75_Count_activity,colour=All_Activities_Refined,group=All_Activities_Refined),width=0.5,alpha=1,size=0.25)+
+  geom_point(data=whinlatter_activity_summary, inherit.aes=FALSE,aes(x=as.integer(All_Activities_Refined),y=lower25_Count_activity,colour=All_Activities_Refined,group=All_Activities_Refined,text=paste0(All_Activities_Refined,"\n",round(lower25_Count_activity,0)," cars","\n(25% of total sample)")),alpha=0,size=0)+
+  geom_point(data=whinlatter_activity_summary, inherit.aes=FALSE,aes(x=as.integer(All_Activities_Refined),y=upper75_Count_activity,colour=All_Activities_Refined,group=All_Activities_Refined,text=paste0(All_Activities_Refined,"\n",round(upper75_Count_activity,0)," cars","\n(75% of total sample)")),alpha=0,size=0)+
+  geom_point(data=whinlatter_activity_summary, inherit.aes=FALSE,aes(x=as.integer(All_Activities_Refined),y=median_Count_activity,colour=All_Activities_Refined,group=All_Activities_Refined,text=paste0(All_Activities_Refined,"\n",round(median_Count_activity,0)," cars","\n(50% of total sample)")),alpha=1,size=2.5)+
+  labs(y="Number of cars",x="Date")+
+  coord_cartesian(ylim=c(-20,300),xlim=c(0.5,12.5),expand=FALSE)+
+  scale_x_continuous(breaks=seq(1,12,by=1),labels=levels(whinlatter_day_summary_plus_activity$All_Activities_Refined))+
+  scale_y_continuous(breaks=seq(0,300,by=100))+
+  scale_colour_manual(values=div_palette_gp_fun(12))+
+  scale_fill_manual(values=div_palette_gp_fun(12))+
+  theme(plot.title = element_text(size=10,face="bold"),axis.title.x=element_blank(),axis.text = element_text(size=8),axis.text.x = element_text(size=6,angle=90,hjust=1,vjust=0.5),strip.background=element_rect(fill=NA,),strip.text=element_text(size=12),axis.title=element_text(size=10,face="bold"),panel.spacing=unit(0.05, "cm"))+
+  guides(fill=FALSE,linetype=FALSE,colour=FALSE)
+
+
+
+gg<-ggplotly(gg_Count_activity, tooltip=c("text"))
+m <- list(
+    l = 30,
+    r = 30,
+    b = 30,
+    t = 50,
+    pad = 0
+  )
+
+gg<-layout(gg, dragmode = "zoom")%>%layout(legend = list(y=0.5,x=1.1,yanchor="middle",tracegroupgap = 0),hoverlabel=list(xanchor="left",yanchor="middle"))%>%style(textposition = "left", boxpoints = FALSE)
+
+gg$x$layout$showlegend<-FALSE
+
+gg
+
+```
+
+# Activities  {data-icon="fas fa-walking"}
+
+## Sidebar {data-width=400; .sidebar}
+
+
+**Activities** 
+
+- Charts are plotted on tabs. Time series data (first tab) are plotted as total daily number of cars by activity (most to least popular combination, top to bottom, note log10 y axis).
+
+- Breakdowns of activity by day of week, activity by kiosk, day of week by activity and time of day by activity (second to fifth tab) are plotted as average (median) values (small data points, random variation added per point along the horizontal axis to better separate out the points). Large data points show the average (median) values per category, with darker error bars containing 50% of all counts per category and lighter error bars containing 90% of all counts per category.
+
+- The time series data shows different levels of seasonality by activity, with biking being less seasonal (consistent numbers through time) versus, e.g. Go Ape. Running has a clear peak on Saturdays, reflecting parkrun visits.
+
+- The stand-out point from the breakdown by day of week is again for running, with a notably higher value for Saturday.
+
+- Number of visits across all activities were greater during holidays, with no clear differences by activity.
+
+- There were no clear trends in the kiosk data, other than activities mostly being recorded at kiosks 1-3 rather than on the website or shop kiosk.
+
+- Entry time by activity tends to peak between 10-11:00 for all activities.
+
+## Row {.tabset}
+
+### Time series
+
+```{r act ts,eval=TRUE, echo=FALSE,message = FALSE,warning=FALSE}
+
+gg_act_count_ts<-ggplot(whinlatter_clean_act,aes(x=Entry_day ,y=Count,group=All_Activities_Refined))+
+  theme_bw()+
+  facet_grid(All_Activities_Refined~.,scales="free_y")+
+  geom_line(aes(colour=All_Activities_Refined,text=paste0(All_Activities_Refined,"\n",Entry_day,"\nCount = ",round(Count,0)," cars")),alpha=1,size=0.5)+
+  geom_vline(aes(xintercept = as.numeric(as.Date("2021-04-01"))),linetype=2,colour="grey72",size=1)+
+  labs(y="Number of cars",x="Date")+
+  #coord_cartesian(ylim=c(-20,350),expand=FALSE)+
+  scale_y_continuous(breaks=c(1,10,100,500),trans="log1p")+
+  scale_x_date(date_breaks = "month",date_labels = "%d/%m/%Y")+
+  scale_colour_manual(values=div_palette_gp_fun(12))+
+  scale_fill_manual(values=div_palette_gp_fun(12))+
+  theme(plot.title = element_text(size=10,face="bold"),axis.title.x=element_blank(),axis.text = element_text(size=6),axis.text.x = element_text(size=6,angle=90,hjust=1,vjust=0.5),legend.position ='none',strip.background=element_rect(fill=NA,,colour=NA),strip.text.y=element_text(size=8,angle=0,vjust=0.5,hjust=0),axis.title=element_text(size=10,face="bold"),panel.spacing=unit(0.05, "cm"))+
+  guides(fill=FALSE,linetype=FALSE,colour=FALSE)
+
+
+
+gg<-ggplotly(gg_act_count_ts, tooltip=c("text"))
+m <- list(
+    l = 30,
+    r = 150,
+    b = 30,
+    t = 50,
+    pad = 0
+  )
+
+gg<-layout(gg, dragmode = "zoom")%>%layout(margin=m,legend = list(y=0.5,x=1.1,yanchor="middle",tracegroupgap = 0),hoverlabel=list(xanchor="left",yanchor="middle"),annotations=list(x=18628+40,y=270,text="Section excluded from analysis", showarrow = FALSE,font=list(size=10,color="#808080")))%>%style(textposition = "left")
+
+gg
+
+```
+
+### Activity by day of week
+
+```{r act weekday,eval=TRUE, echo=FALSE,message = FALSE,warning=FALSE}
+
+gg_Count_weekday<-ggplot(filter(whinlatter_day_summary_plus_activity,Entry_integer>106),aes(x=All_Activities_Refined ,y=Count))+
+  theme_bw()+
+  facet_grid(Entry_day_of_week~.,scales="free_y")+
+  #geom_jitter(aes(colour=All_Activities_Refined,text=paste0(All_Activities_Refined,"\nNumber of cars\non this day\nfor this activity combo = ",Count)),alpha=0.3,size=0.25,width=0.2,height=0)+
+  geom_errorbar(data=whinlatter_activity_day_summary, inherit.aes=FALSE,aes(x=All_Activities_Refined,ymin=lower05_count_activity,ymax=upper95_count_activity,colour=All_Activities_Refined,group=All_Activities_Refined),width=0.5,alpha=0.3,size=0.25)+
+  geom_point(data=whinlatter_activity_day_summary, inherit.aes=FALSE,aes(x=All_Activities_Refined,y=lower05_count_activity,colour=All_Activities_Refined,group=All_Activities_Refined,text=paste0(All_Activities_Refined,"\n",Entry_day_of_week,"\n",round(lower05_count_activity,0)," cars"," \n(5% of total sample)")),alpha=0,size=0)+
+  geom_point(data=whinlatter_activity_day_summary, inherit.aes=FALSE,aes(x=All_Activities_Refined,y=upper95_count_activity,colour=All_Activities_Refined,group=All_Activities_Refined,text=paste0(All_Activities_Refined,"\n",Entry_day_of_week,"\n",round(upper95_count_activity,0)," cars"," \n(95% of total sample)")),alpha=0,size=0)+
+  geom_errorbar(data=whinlatter_activity_day_summary, inherit.aes=FALSE,aes(x=All_Activities_Refined,ymin=lower25_count_activity,ymax=upper75_count_activity,colour=All_Activities_Refined,group=All_Activities_Refined),width=0.5,alpha=1,size=0.25)+
+  geom_point(data=whinlatter_activity_day_summary, inherit.aes=FALSE,aes(x=All_Activities_Refined,y=lower25_count_activity,colour=All_Activities_Refined,group=All_Activities_Refined,text=paste0(All_Activities_Refined,"\n",Entry_day_of_week,"\n",round(lower25_count_activity,0)," cars","\n(25% of total sample)")),alpha=0,size=0)+
+  geom_point(data=whinlatter_activity_day_summary, inherit.aes=FALSE,aes(x=All_Activities_Refined,y=upper75_count_activity,colour=All_Activities_Refined,group=All_Activities_Refined,text=paste0(All_Activities_Refined,"\n",Entry_day_of_week,"\n",round(upper75_count_activity,0)," cars","\n(75% of total sample)")),alpha=0,size=0)+
+  geom_point(data=whinlatter_activity_day_summary, inherit.aes=FALSE,aes(x=All_Activities_Refined,y=median_count_activity,colour=All_Activities_Refined,group=All_Activities_Refined,text=paste0(All_Activities_Refined,"\n",Entry_day_of_week,"\n",round(median_count_activity,0)," cars","\n(50% of total sample)")),alpha=1,size=2)+
+  labs(y="Number of cars",x="Date")+
+  coord_cartesian(ylim=c(-20,150),expand=FALSE)+
+  scale_y_continuous(breaks=seq(0,300,by=50))+
+  scale_colour_manual(values=div_palette_gp_fun(12))+
+  scale_fill_manual(values=div_palette_gp_fun(12))+
+  theme(plot.title = element_text(size=10,face="bold"),axis.title.x=element_blank(),axis.text = element_text(size=8),axis.text.x = element_text(size=6),legend.position ='none',strip.background=element_rect(fill=NA,colour=NA),strip.text.y=element_text(size=10,angle=0,vjust=0.5,hjust=0),axis.title=element_text(size=10,face="bold"),panel.spacing=unit(0.05, "cm"))+
+  guides(fill=FALSE,linetype=FALSE,colour=FALSE)
+
+
+
+gg<-ggplotly(gg_Count_weekday, tooltip=c("text"))
+m <- list(
+    l = 30,
+    r = 100,
+    b = 30,
+    t = 50,
+    pad = 0
+  )
+
+gg<-layout(gg, dragmode = "zoom")%>%layout(margin=m,legend = list(y=0.5,x=1.1,yanchor="middle",tracegroupgap = 0),hoverlabel=list(xanchor="left",yanchor="middle"))%>%style(textposition = "left", boxpoints = FALSE)
+
+gg$x$layout$showlegend<-FALSE
+
+gg
+
+```
+
+
+### Day of week by activity
+
+```{r weekday act,eval=TRUE, echo=FALSE,message = FALSE,warning=FALSE}
+
+gg_Count_weekday<-ggplot(filter(whinlatter_day_summary_plus_activity,Entry_integer>106),aes(x=Entry_day_of_week ,y=Count))+
+  theme_bw()+
+  facet_wrap(~All_Activities_Refined,scales="free_y",nrow=3)+
+  #geom_jitter(aes(colour=Entry_day_of_week),alpha=0.3,size=0.25,width=0.2,height=0)+
+  geom_errorbar(data=whinlatter_activity_day_summary, inherit.aes=FALSE,aes(x=Entry_day_of_week,ymin=lower05_count_activity,ymax=upper95_count_activity,colour=Entry_day_of_week,group=All_Activities_Refined),width=0.5,alpha=0.3,size=0.25)+
+  geom_point(data=whinlatter_activity_day_summary, inherit.aes=FALSE,aes(x=Entry_day_of_week,y=lower05_count_activity,colour=Entry_day_of_week,group=All_Activities_Refined,text=paste0(All_Activities_Refined,"\n",Entry_day_of_week,"\n",round(lower05_count_activity,0)," cars"," \n(5% of total sample)")),alpha=0,size=0)+
+  geom_point(data=whinlatter_activity_day_summary, inherit.aes=FALSE,aes(x=Entry_day_of_week,y=upper95_count_activity,colour=Entry_day_of_week,group=All_Activities_Refined,text=paste0(All_Activities_Refined,"\n",Entry_day_of_week,"\n",round(upper95_count_activity,0)," cars"," \n(95% of total sample)")),alpha=0,size=0)+
+  geom_errorbar(data=whinlatter_activity_day_summary, inherit.aes=FALSE,aes(x=Entry_day_of_week,ymin=lower25_count_activity,ymax=upper75_count_activity,colour=Entry_day_of_week,group=All_Activities_Refined),width=0.5,alpha=1,size=0.25)+
+  geom_point(data=whinlatter_activity_day_summary, inherit.aes=FALSE,aes(x=Entry_day_of_week,y=lower25_count_activity,colour=Entry_day_of_week,group=All_Activities_Refined,text=paste0(All_Activities_Refined,"\n",Entry_day_of_week,"\n",round(lower25_count_activity,0)," cars","\n(25% of total sample)")),alpha=0,size=0)+
+  geom_point(data=whinlatter_activity_day_summary, inherit.aes=FALSE,aes(x=Entry_day_of_week,y=upper75_count_activity,colour=Entry_day_of_week,group=All_Activities_Refined,text=paste0(All_Activities_Refined,"\n",Entry_day_of_week,"\n",round(upper75_count_activity,0)," cars","\n(75% of total sample)")),alpha=0,size=0)+
+  geom_point(data=whinlatter_activity_day_summary, inherit.aes=FALSE,aes(x=Entry_day_of_week,y=median_count_activity,colour=Entry_day_of_week,group=All_Activities_Refined,text=paste0(All_Activities_Refined,"\n",Entry_day_of_week,"\n",round(median_count_activity,0)," cars","\n(50% of total sample)")),alpha=1,size=1.5)+
+  labs(y="Number of cars",x="Date")+
+  #coord_cartesian(ylim=c(-20,200),expand=FALSE)+
+  #scale_y_continuous(breaks=seq(0,300,by=50))+
+  scale_colour_manual(values=div_palette_gp_fun(7))+
+  scale_fill_manual(values=div_palette_gp_fun(7))+
+  theme(plot.title = element_text(size=10,face="bold"),axis.title.x=element_blank(),axis.text = element_text(size=8),axis.text.x = element_text(size=8,angle=90,hjust=1,vjust=0.5),legend.position ='none',strip.background=element_rect(fill=NA,colour=NA),axis.title=element_text(size=10,face="bold"),panel.spacing=unit(0.05, "cm"))+
+  guides(fill=FALSE,linetype=FALSE,colour=FALSE)
+
+
+
+gg<-ggplotly(gg_Count_weekday, tooltip=c("text"))
+m <- list(
+    l = 30,
+    r = 30,
+    b = 30,
+    t = 50,
+    pad = 0
+  )
+
+gg<-layout(gg, dragmode = "zoom")%>%layout(margin=m,legend = list(y=0.5,x=1.1,yanchor="middle",tracegroupgap = 0),hoverlabel=list(xanchor="left",yanchor="middle"))%>%style(textposition = "left", boxpoints = FALSE)
+
+gg$x$layout$showlegend<-FALSE
+
+gg
+
+```
+
+
+### Time of day by activity
+
+```{r time act,eval=TRUE, echo=FALSE,message = FALSE,warning=FALSE}
+whinlatter_day_summary_plus_activity_plus_time$Entry_time_factor<-paste0(whinlatter_day_summary_plus_activity_plus_time$Entry_time_integer,":00")
+whinlatter_activity_time_summary$Entry_time_factor<-paste0(whinlatter_activity_time_summary$Entry_time_integer,":00")
+
+whinlatter_day_summary_plus_activity_plus_time$Entry_time_factor<-factor(whinlatter_day_summary_plus_activity_plus_time$Entry_time_factor,levels=c(paste0(9:18,":00")))
+
+whinlatter_activity_time_summary$Entry_time_factor<-factor(whinlatter_activity_time_summary$Entry_time_factor,levels=c(paste0(9:18,":00")))
+
+whinlatter_day_summary_plus_activity_plus_time<-whinlatter_day_summary_plus_activity_plus_time%>%filter(!is.na(Entry_time_factor))
+
+whinlatter_activity_time_summary<-whinlatter_activity_time_summary%>%filter(!is.na(Entry_time_factor))
+
+gg_Count_weekday<-ggplot(filter(whinlatter_day_summary_plus_activity_plus_time,Entry_integer>106),aes(x=Entry_time_factor ,y=Count))+
+  theme_bw()+
+  facet_wrap(~All_Activities_Refined,scales="free_y",nrow=3)+
+  #geom_jitter(aes(colour=Entry_time_factor),alpha=0.3,size=0.25,width=0.2,height=0)+
+  geom_errorbar(data=whinlatter_activity_time_summary, inherit.aes=FALSE,aes(x=Entry_time_factor,ymin=lower05_count_activity,ymax=upper95_count_activity,colour=Entry_time_factor,group=All_Activities_Refined),width=0.5,alpha=0.3,size=0.25)+
+  geom_point(data=whinlatter_activity_time_summary, inherit.aes=FALSE,aes(x=Entry_time_factor,y=lower05_count_activity,colour=Entry_time_factor,group=All_Activities_Refined,text=paste0(All_Activities_Refined,"\n",Entry_time_factor,"\n",round(lower05_count_activity,0)," cars"," \n(5% of total sample)")),alpha=0,size=0)+
+  geom_point(data=whinlatter_activity_time_summary, inherit.aes=FALSE,aes(x=Entry_time_factor,y=upper95_count_activity,colour=Entry_time_factor,group=All_Activities_Refined,text=paste0(All_Activities_Refined,"\n",Entry_time_factor,"\n",round(upper95_count_activity,0)," cars"," \n(95% of total sample)")),alpha=0,size=0)+
+  geom_errorbar(data=whinlatter_activity_time_summary, inherit.aes=FALSE,aes(x=Entry_time_factor,ymin=lower25_count_activity,ymax=upper75_count_activity,colour=Entry_time_factor,group=All_Activities_Refined),width=0.5,alpha=1,size=0.25)+
+  geom_point(data=whinlatter_activity_time_summary, inherit.aes=FALSE,aes(x=Entry_time_factor,y=lower25_count_activity,colour=Entry_time_factor,group=All_Activities_Refined,text=paste0(All_Activities_Refined,"\n",Entry_time_factor,"\n",round(lower25_count_activity,0)," cars","\n(25% of total sample)")),alpha=0,size=0)+
+  geom_point(data=whinlatter_activity_time_summary, inherit.aes=FALSE,aes(x=Entry_time_factor,y=upper75_count_activity,colour=Entry_time_factor,group=All_Activities_Refined,text=paste0(All_Activities_Refined,"\n",Entry_time_factor,"\n",round(upper75_count_activity,0)," cars","\n(75% of total sample)")),alpha=0,size=0)+
+  geom_point(data=whinlatter_activity_time_summary, inherit.aes=FALSE,aes(x=Entry_time_factor,y=median_count_activity,colour=Entry_time_factor,group=All_Activities_Refined,text=paste0(All_Activities_Refined,"\n",Entry_time_factor,"\n",round(median_count_activity,0)," cars","\n(50% of total sample)")),alpha=1,size=1.5)+
+  labs(y="Number of cars",x="Date")+
+  #coord_cartesian(ylim=c(-20,200),expand=FALSE)+
+  #scale_y_continuous(breaks=seq(0,300,by=50))+
+  scale_colour_manual(values=div_palette_gp_fun(12))+
+  scale_fill_manual(values=div_palette_gp_fun(12))+
+  theme(plot.title = element_text(size=10,face="bold"),axis.title.x=element_blank(),axis.text = element_text(size=8),axis.text.x = element_text(size=8,angle=90,hjust=1,vjust=0.5),legend.position ='none',strip.background=element_rect(fill=NA,colour=NA),strip.text.y=element_text(size=10,angle=0,vjust=0.5,hjust=0),axis.title=element_text(size=10,face="bold"),panel.spacing=unit(0.05, "cm"))+
+  guides(fill=FALSE,linetype=FALSE,colour=FALSE)
+
+
+
+gg<-ggplotly(gg_Count_weekday, tooltip=c("text"))
+m <- list(
+    l = 30,
+    r = 30,
+    b = 30,
+    t = 50,
+    pad = 0
+  )
+
+gg<-layout(gg, dragmode = "zoom")%>%layout(margin=m,legend = list(y=0.5,x=1.1,yanchor="middle",tracegroupgap = 0),hoverlabel=list(xanchor="left",yanchor="middle"))%>%style(textposition = "left", boxpoints = FALSE)
+
+gg$x$layout$showlegend<-FALSE
+
+gg
+
+```
+
+### Activity by holiday day
+
+```{r act holdiay day,eval=TRUE, echo=FALSE,message = FALSE,warning=FALSE}
+
+gg_Count_weekday<-ggplot(filter(whinlatter_day_summary_plus_activity_plus_holiday,Entry_integer>106),aes(x=All_Activities_Refined ,y=Count))+
+  theme_bw()+
+  facet_grid(Holiday~.,scales="free_y")+
+  #geom_jitter(aes(colour=All_Activities_Refined,text=paste0(All_Activities_Refined,"\n","Number of cars\non this day\nfor this activity combo = ",Count)),alpha=0.3,size=0.25,width=0.2,height=0)+
+  geom_errorbar(data=whinlatter_activity_holiday_summary, inherit.aes=FALSE,aes(x=All_Activities_Refined,ymin=lower05_count_activity,ymax=upper95_count_activity,colour=All_Activities_Refined,group=All_Activities_Refined),width=0.5,alpha=0.3,size=0.25)+
+  geom_point(data=whinlatter_activity_holiday_summary, inherit.aes=FALSE,aes(x=All_Activities_Refined,y=lower05_count_activity,colour=All_Activities_Refined,group=All_Activities_Refined,text=paste0(All_Activities_Refined,"\n",round(lower05_count_activity,0)," cars"," \n(5% of total sample)")),alpha=0,size=0)+
+  geom_point(data=whinlatter_activity_holiday_summary, inherit.aes=FALSE,aes(x=All_Activities_Refined,y=upper95_count_activity,colour=All_Activities_Refined,group=All_Activities_Refined,text=paste0(All_Activities_Refined,"\n",round(upper95_count_activity,0)," cars"," \n(95% of total sample)")),alpha=0,size=0)+
+  geom_errorbar(data=whinlatter_activity_holiday_summary, inherit.aes=FALSE,aes(x=All_Activities_Refined,ymin=lower25_count_activity,ymax=upper75_count_activity,colour=All_Activities_Refined,group=All_Activities_Refined),width=0.5,alpha=1,size=0.25)+
+  geom_point(data=whinlatter_activity_holiday_summary, inherit.aes=FALSE,aes(x=All_Activities_Refined,y=lower25_count_activity,colour=All_Activities_Refined,group=All_Activities_Refined,text=paste0(All_Activities_Refined,"\n",round(lower25_count_activity,0)," cars","\n(25% of total sample)")),alpha=0,size=0)+
+  geom_point(data=whinlatter_activity_holiday_summary, inherit.aes=FALSE,aes(x=All_Activities_Refined,y=upper75_count_activity,colour=All_Activities_Refined,group=All_Activities_Refined,text=paste0(All_Activities_Refined,"\n",round(upper75_count_activity,0)," cars","\n(75% of total sample)")),alpha=0,size=0)+
+  geom_point(data=whinlatter_activity_holiday_summary, inherit.aes=FALSE,aes(x=All_Activities_Refined,y=median_count_activity,colour=All_Activities_Refined,group=All_Activities_Refined,text=paste0(All_Activities_Refined,"\n",round(median_count_activity,0)," cars","\n(50% of total sample)")),alpha=1,size=2)+
+  labs(y="Number of cars",x="Date")+
+  coord_cartesian(ylim=c(-5,199),expand=FALSE)+
+  scale_y_continuous(breaks=seq(0,200,by=40))+
+  scale_colour_manual(values=div_palette_gbr_fun(12))+
+  scale_fill_manual(values=div_palette_gbr_fun(12))+
+  theme(plot.title = element_text(size=10,face="bold"),axis.title.x=element_blank(),axis.text = element_text(size=8),axis.text.x = element_text(size=6),legend.position ='none',strip.background=element_rect(fill=NA,colour=NA),strip.text.y=element_text(size=10,angle=0,vjust=0.5,hjust=0),axis.title=element_text(size=10,face="bold"),panel.spacing=unit(0.05, "cm"))+
+  guides(fill=FALSE,linetype=FALSE,colour=FALSE)
+
+
+
+gg<-ggplotly(gg_Count_weekday, tooltip=c("text"))
+m <- list(
+    l = 30,
+    r = 100,
+    b = 30,
+    t = 50,
+    pad = 0
+  )
+
+gg<-layout(gg, dragmode = "zoom")%>%layout(margin=m,legend = list(y=0.5,x=1.1,yanchor="middle",tracegroupgap = 0),hoverlabel=list(xanchor="left",yanchor="middle"))%>%style(textposition = "left", boxpoints = FALSE)
+
+gg$x$layout$showlegend<-FALSE
+
+gg
+
+```
+
+### Activity by kiosk
+
+```{r act kiosk,eval=TRUE, echo=FALSE,message = FALSE,warning=FALSE}
+
+gg_Count_weekday<-ggplot(filter(whinlatter_day_summary_plus_activity_plus_kiosk,Entry_integer>106),aes(x=All_Activities_Refined ,y=Count))+
+  theme_bw()+
+  facet_grid(Payment_Source~.,scales="free_y")+
+  #geom_jitter(aes(colour=All_Activities_Refined,text=paste0(All_Activities_Refined,"\n","Number of cars\non this day\nfor this activity combo = ",Count)),alpha=0.3,size=0.25,width=0.2,height=0)+
+  geom_errorbar(data=whinlatter_activity_kiosk_summary, inherit.aes=FALSE,aes(x=All_Activities_Refined,ymin=lower05_count_activity,ymax=upper95_count_activity,colour=All_Activities_Refined,group=All_Activities_Refined),width=0.5,alpha=0.3,size=0.25)+
+  geom_point(data=whinlatter_activity_kiosk_summary, inherit.aes=FALSE,aes(x=All_Activities_Refined,y=lower05_count_activity,colour=All_Activities_Refined,group=All_Activities_Refined,text=paste0(All_Activities_Refined,"\n",round(lower05_count_activity,0)," cars"," \n(5% of total sample)")),alpha=0,size=0)+
+  geom_point(data=whinlatter_activity_kiosk_summary, inherit.aes=FALSE,aes(x=All_Activities_Refined,y=upper95_count_activity,colour=All_Activities_Refined,group=All_Activities_Refined,text=paste0(All_Activities_Refined,"\n",round(upper95_count_activity,0)," cars"," \n(95% of total sample)")),alpha=0,size=0)+
+  geom_errorbar(data=whinlatter_activity_kiosk_summary, inherit.aes=FALSE,aes(x=All_Activities_Refined,ymin=lower25_count_activity,ymax=upper75_count_activity,colour=All_Activities_Refined,group=All_Activities_Refined),width=0.5,alpha=1,size=0.25)+
+  geom_point(data=whinlatter_activity_kiosk_summary, inherit.aes=FALSE,aes(x=All_Activities_Refined,y=lower25_count_activity,colour=All_Activities_Refined,group=All_Activities_Refined,text=paste0(All_Activities_Refined,"\n",round(lower25_count_activity,0)," cars","\n(25% of total sample)")),alpha=0,size=0)+
+  geom_point(data=whinlatter_activity_kiosk_summary, inherit.aes=FALSE,aes(x=All_Activities_Refined,y=upper75_count_activity,colour=All_Activities_Refined,group=All_Activities_Refined,text=paste0(All_Activities_Refined,"\n",round(upper75_count_activity,0)," cars","\n(75% of total sample)")),alpha=0,size=0)+
+  geom_point(data=whinlatter_activity_kiosk_summary, inherit.aes=FALSE,aes(x=All_Activities_Refined,y=median_count_activity,colour=All_Activities_Refined,group=All_Activities_Refined,text=paste0(All_Activities_Refined,"\n",round(median_count_activity,0)," cars","\n(50% of total sample)")),alpha=1,size=2)+
+  labs(y="Number of cars",x="Date")+
+  coord_cartesian(ylim=c(-5,60),expand=FALSE)+
+  scale_y_continuous(breaks=seq(0,50,by=10))+
+  scale_colour_manual(values=div_palette_gp_fun(12))+
+  scale_fill_manual(values=div_palette_gp_fun(12))+
+  theme(plot.title = element_text(size=10,face="bold"),axis.title.x=element_blank(),axis.text = element_text(size=8),axis.text.x = element_text(size=6),legend.position ='none',strip.background=element_rect(fill=NA,colour=NA),strip.text.y=element_text(size=10,angle=0,vjust=0.5,hjust=0),axis.title=element_text(size=10,face="bold"),panel.spacing=unit(0.05, "cm"))+
+  guides(fill=FALSE,linetype=FALSE,colour=FALSE)
+
+
+
+gg<-ggplotly(gg_Count_weekday, tooltip=c("text"))
+m <- list(
+    l = 30,
+    r = 100,
+    b = 30,
+    t = 50,
+    pad = 0
+  )
+
+gg<-layout(gg, dragmode = "zoom")%>%layout(margin=m,legend = list(y=0.5,x=1.1,yanchor="middle",tracegroupgap = 0),hoverlabel=list(xanchor="left",yanchor="middle"))%>%style(textposition = "left", boxpoints = FALSE)
+
+gg$x$layout$showlegend<-FALSE
+
+gg
+
+```
+
+
+# Data Tables {.storyboard data-icon="fas fa-table"}
+
+### Data Table: Number of visits
+
+```{r}
+
+
+whinlatter_day_hour_duration_summary_plus_kiosk<-whinlatter_clean%>%dplyr::select("Date"=Entry_day,"Day of week"=Entry_day_of_week,"Entry month"=Entry_month,"Year"=Entry_year,"Month and Year"=Entry_month_year,"Entry hour"=Entry_time_integer,"Exit hour"=Exit_time_integer,"Chargeable time (mins)"=Chargable_Duration,Holiday,"Payment Source"=Payment_Source,"Activity (refined list)"=All_Activities_Refined,"Activity (all)"=All_Activities)%>%group_by_all()%>%summarise(Count=n()) #exclude counts of <7 as initial view of data shows not reliable
+whinlatter_day_hour_duration_summary_plus_kiosk$`Entry hour`<-paste0(whinlatter_day_hour_duration_summary_plus_kiosk$`Entry hour`,":00")
+whinlatter_day_hour_duration_summary_plus_kiosk$`Exit hour`<-paste0(whinlatter_day_hour_duration_summary_plus_kiosk$`Exit hour`,":00")
+
+rpivotTable(whinlatter_day_hour_duration_summary_plus_kiosk,rows="Day of week",cols=c("Payment Source"),vals="Count",width="900px",height="50%",sorters=
+"function(attr) {
+var sortAs = $.pivotUtilities.sortAs;
+if (attr == \"Day of week\") { return sortAs([\"Monday\", \"Tuesday\",\"Wednesday\",\"Thursday\",\"Friday\", \"Saturday\", \"Sunday\"]); }}"
+)
+
+
+```
+
