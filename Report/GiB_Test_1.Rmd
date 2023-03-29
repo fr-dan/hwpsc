@@ -72,6 +72,10 @@ qual_palette<-c(rgb(98,166,14,maxColorValue = 255),rgb(103,37,127,maxColorValue 
 
 #home-made functions that may be required
 
+#### conversion factors ####
+hardwood_m3_per_tonne<-1.43
+hardwood_m3_per_hft<-0.03605
+
 
 setwd("C:/Users/jack.forster/OneDrive - Forest Research/Documents/HomeDrive/157b22_GiB/hwpsc/Report")
 ```
@@ -86,13 +90,13 @@ Qu_sub_not_fill_match<-c("X...UserID","UserNo","Name","Email","IP.Address","Uniq
 
 gib_raw <-
   gib_raw %>% mutate(
-    Qu_main = trim(paste0(row.names(df_raw))),
+    Qu_main = trim(paste0(row.names(gib_raw))),
     Qu_sub = trim(paste0(X1)),
-    Qu_sub_sub = trim(paste0(df_raw$X2)),
+    Qu_sub_sub = trim(paste0(gib_raw$X2)),
     Qu_main = ifelse(str_detect(Qu_sub, "Site specific or other factors that alter prices"),"QXX Site specific or other factors that alter prices",Qu_main),
     Qu_sub = ifelse(str_detect(Qu_main, "Are.there.any.hardwood.tree.species.that.were.not"),"Unfilled",Qu_sub),
     Qu_sub = ifelse(Qu_main %in% Qu_sub_not_fill_match, "Unfilled", Qu_sub),
-    Qu_main = ifelse(Qu_main == "X...UserID", "UserID", Qu_main),
+    Qu_main = ifelse(str_detect(Qu_main,"UserID"), "UserID", Qu_main),
     Qu_main = ifelse(substr(Qu_main, 1, 1) == "X", NA, Qu_main),
     Qu_sub = ifelse(Qu_sub == "", NA, Qu_sub)
   ) %>% fill(Qu_main:Qu_sub) %>% 
@@ -128,3 +132,22 @@ write_xlsx(gib_clean_data,"gib_clean_data.xlsx")
 ```
 
 
+
+```{r aligning units etc, include=FALSE}
+gib_clean_data_units_aligned <-
+  gib_clean_data %>% mutate(
+    across(Parcel_Volume_m3:Parcel_Volume_hft,
+      ~ ifelse(is.na(as.numeric(.)), 0, as.numeric(.))),
+    across(`Price (Â£/m3)`:`Total Volume (m3)`, ~ ifelse(is.na(.), 0, .)),
+    Price_Clean_m3 = `Price (Â£/m3)` + `Price (Â£/tonne)` / hardwood_m3_per_tonne +
+      `Price (Â£/hft)` / hardwood_m3_per_hft,
+    Volume_Clean_m3 = `Volume (m3)` + `Volume (tonnes)` * hardwood_m3_per_tonne +
+      `Total Volume (hft)` * hardwood_m3_per_hft + `Total Volume (m3)`,
+    Average_Size_Clean_m3 = `Average Log Size (hft)` * hardwood_m3_per_hft +
+      `Average Log Size (m3)` + `Average Tree Size (hft)` * hardwood_m3_per_hft +
+      `Average Tree Size (m3)`,
+    Log_Tree = ifelse(Cat_Key_Trt == "Purchase: Felled", "Log", "Tree"),
+    Parcel_Volume_Clean_m3 = Parcel_Volume_m3 + Parcel_Volume_hft * hardwood_m3_per_hft
+  )%>%dplyr::select(-c(Parcel_Volume_m3:Parcel_Volume_hft,`Price (Â£/m3)`:`Total Volume (m3)`))%>%filter(!Volume_Clean_m3==0)
+
+```
