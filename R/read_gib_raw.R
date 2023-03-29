@@ -26,7 +26,7 @@ read_gib_raw <- function(path = NULL) {
       Qu_main = ifelse(str_detect(Qu_sub, "Site specific or other factors that alter prices"),"QXX Site specific or other factors that alter prices",Qu_main),
       Qu_sub = ifelse(str_detect(Qu_main, "Are.there.any.hardwood.tree.species.that.were.not"),"Unfilled",Qu_sub),
       Qu_sub = ifelse(Qu_main %in% Qu_sub_not_fill_match, "Unfilled", Qu_sub),
-      Qu_main = ifelse(Qu_main == "X...UserID", "UserID", Qu_main),
+      Qu_main = ifelse(str_detect(Qu_main,"UserID"), "UserID", Qu_main),
       Qu_main = ifelse(substr(Qu_main, 1, 1) == "X", NA, Qu_main),
       Qu_sub = ifelse(Qu_sub == "", NA, Qu_sub)
     ) %>% fill(Qu_main:Qu_sub) %>%
