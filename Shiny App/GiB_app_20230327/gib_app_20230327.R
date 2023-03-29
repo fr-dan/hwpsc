@@ -15,6 +15,7 @@ library(rmarkdown)
 library(rsconnect)
 library(callr)
 library(fresh)
+library(viridis)
 
 mytheme <- create_theme(
   adminlte_color(
@@ -46,7 +47,7 @@ render_report <- function(input, output, params) {
 
 #setwd("C:/Users/jack.forster/OneDrive - Forest Research/Documents/HomeDrive/144b22/R Code and Data/Whinlatter_CP")
 ui <- dashboardPage(
-    dashboardHeader(title = "Grown in Britain: Hardwood Prices",
+    dashboardHeader(title = "Hardwood Prices",
                     tags$li(a(href = 'http://www.company.com',
                               img(src = 'FRlogo_stacked_no_strap_white box.jpg',
                                   title = "Company Home", height = "30px"),
@@ -60,15 +61,15 @@ ui <- dashboardPage(
     dashboardSidebar(
     sidebarMenu(
         tags$style(".skin-purple .sidebar .shiny-download-link { color: #444; }"),
-        # Input: Select a time ----
-        div(selectInput("sp_input", "Select a species:",list("Ash","Beech","Cherry","Lime","Mixed","Oak",
-                                                             "Poplar","Sweet Chestnut","Sycamore"),multiple=TRUE),style="margin: 0px 5px 0px 5px;"),
+        # Input: Select a sp ----
+        div(selectInput("sp_input", "Select species:",list("Ash","Beech","Cherry","Lime","Mixed","Oak",
+                                                             "Poplar","Sweet Chestnut","Sycamore"),multiple=FALSE),style="margin: 0px 5px 0px 5px;"),
         # Horizontal line ----
         tags$hr(),
-        div(selectInput("prod_input", "Select a product:",list("Beam","Biomass/Firewood","Mixed/Unknown","Planking","Sawlog"),multiple=TRUE),style="margin: 0px 5px 0px 5px;"),
+        div(selectInput("pred_input", "Select a predictor:",list("Log/Tree Size","Sale/Purchase Type","Product","Region"),multiple=FALSE),style="margin: 0px 5px 0px 5px;"),
         # Horizontal line ----
         tags$hr(),
-        div(selectInput("pred_input", "Select a predictor:",list("Log/Tree Size","Species","Product","Region"),multiple=FALSE),style="margin: 0px 5px 0px 5px;"),
+        div(selectInput("prod_input", "Optional additional grouping(s):",list("Sale/Purchase Type","Product","Region"),multiple=TRUE),style="margin: 0px 5px 0px 5px;"),
         # Horizontal line ----
         tags$hr(),
         div(actionButton("process_jf", "Go!"),style="margin: 0px 0px 0px 80px;"),
@@ -85,7 +86,8 @@ ui <- dashboardPage(
         )
     ),
     dashboardBody(use_theme(mytheme),tags$head(tags$style(HTML('.box{-webkit-box-shadow: none; -moz-box-shadow: none;box-shadow: none;border-top: none;}'))),
-        box(width = 12,height=800,title = "Files uploaded: ",div(DT::dataTableOutput("table1")))
+                  fluidPage(box(width = 12,plotlyOutput("jf_1_plot")),
+             tags$style(type = "text/css", ".plotly  {height: calc(100vh - 100px) !important; width: calc(100vw - 380px) !important;}"),)
     ),
     tags$head(tags$style(HTML('* {font-family: "Arial"};')))
 )
@@ -105,20 +107,61 @@ if (!interactive()) {
         })
 }
 
-temp1 <- eventReactive(input$process_jf, {
-    withProgress(message = 'Processing', value = 0, {
-      load("traveltime_all_60.Rdata")
-      step1<-traveltime_all_60 # replace with forest_10_tt(60)
-      incProgress(0.25,detail = paste("25% complete"))
-      step2<-forest_ons_linkage1(step1)
-      incProgress(0.5,detail = paste("50% complete"))
-      step3<-forest_ons_linkage2(step2)
-      incProgress(0.75,detail = paste("75% complete"))
-      step4<-forest_ons_bind(step3)
-      incProgress(1,detail = paste("100% complete"))})
-    list(step1, step2, step3, step4)
+plots_jf <- eventReactive(input$process_jf, {
+  tree_sp_func<-input$sp_input
+  tree_pred_func<-input$pred_input
+  tree_additional_func<-input$prod_input
+  gib_clean_data_units_aligned<-read_xlsx("C:/Users/jack.forster/OneDrive - Forest Research/Documents/HomeDrive/157b22_GiB/R Code and Data/gib_clean_data_units_aligned.xlsx")
+
+  gib_clean_data_analysis<-gib_clean_data_units_aligned%>%filter(Tree_Species==tree_sp_func) #select relevant tree species
+
+  tree_pred_func_orig<-tree_pred_func
+  tree_pred_func<-dplyr::recode(tree_pred_func,"Sale/Purchase Type"="Cat_Key_Trt")
+  tree_additional_func<-dplyr::recode(unlist(tree_additional_func),"Sale/Purchase Type"="Cat_Key_Trt")
+  # recode inputs
+
+
+  if(tree_pred_func == "Log/Tree Size") {
+    if(length(tree_additional_func)>1) {tree_additional_func<-paste0("interaction(",paste(tree_additional_func,collapse=","),")")}
+    tree_additional_func_group<-paste0("interaction(","Average_Size_Clean_m3",",tree_additional_func",")")
+    gg_tree_size<-ggplot(gib_clean_data_analysis,aes_string(x="Average_Size_Clean_m3",y="Price_Clean_m3",colour=tree_additional_func,fill=tree_additional_func,group=tree_additional_func))+
+      theme_bw()+
+      geom_smooth(aes(text=paste0("Best fit line: ",scales::comma(Price_Clean_m3,accuracy=0.01))),method = 'lm')+
+      geom_jitter(aes(text=paste0("Size = ",scales::comma(Average_Size_Clean_m3,accuracy=0.1)," m<sup>3</sup>","\n","Price = ",scales::comma(Price_Clean_m3,accuracy=0.01),"GBP\n",Cat_Key_Trt,"\n",Product,"\n",Region)),
+                  size=1.5,alpha=0.7,height=0,width=0.025)+
+      labs(x="Average log/tree size (m<sup>3</sup>)",y="Price (GBP)",colour="Grouping\n",fill="Grouping\n",title=paste(tree_sp_func," prices"))+
+      scale_colour_viridis(discrete=TRUE)+
+      scale_fill_viridis(discrete=TRUE)
+
+    gg_tree_size<-ggplotly(gg_tree_size,tooltip=c("text"))%>%layout(title=list(x=0.5,font=list(size=20)),legend = list(x=1.1,y=0.5,yanchor="middle"),hoverlabel=list(xanchor="left",yanchor="middle"))%>%style(textposition = "left")
+    for(i in 1: length(gg_tree_size$x$layout$shapes)) {gg_tree_size$x$layout$shapes[[i]]$line$width<-0.5}
+    gg_tree_size
+
+  } else {
+
+    if(length(tree_additional_func)>1) {tree_additional_func<-paste0("interaction(",paste(tree_additional_func,collapse=","),")")}
+  tree_additional_func_group<-paste0("interaction(",tree_pred_func,",",tree_additional_func,")")
+  gg_tree_size<-ggplot(gib_clean_data_analysis,aes_string(x=tree_pred_func,y="Price_Clean_m3",colour=tree_additional_func,fill=tree_additional_func,group=tree_additional_func_group))+
+    theme_bw()+
+    geom_violin(colour=NA,alpha=0.4,position=position_dodge(width=0.4))+
+    geom_point(aes(text=paste0("Size = ",scales::comma(Average_Size_Clean_m3,accuracy=0.1)," m<sup>3</sup>","\n","Price = ",scales::comma(Price_Clean_m3,accuracy=0.01),"GBP\n",Cat_Key_Trt,"\n",Product,"\n",Region)),position=position_jitterdodge(jitter.width=0.1,dodge.width=0.4),
+               size=1.5,alpha=0.7,height=0,width=0.075)+
+    labs(x=paste(tree_pred_func_orig),y="Price (GBP)",colour="Grouping\n",fill="Grouping\n",title=paste(tree_sp_func," prices"))+
+    scale_colour_viridis(discrete=TRUE)+
+    scale_fill_viridis(discrete=TRUE)
+
+  gg_tree_size<-ggplotly(gg_tree_size,tooltip=c("text"))%>%layout(title=list(x=0.5,font=list(size=20)),legend = list(x=1.1,y=0.5,yanchor="middle"),hoverlabel=list(xanchor="left",yanchor="middle"))%>%style(textposition = "left")
+  for(i in 1: length(gg_tree_size$x$layout$shapes)) {gg_tree_size$x$layout$shapes[[i]]$line$width<-0.5}
+  for(i in 1:length(gg_tree_size$x$data))
+  {if(length(gg_tree_size$x$data[[i]]$text)>1000) {gg_tree_size$x$data[[i]]$text<-""}}
+  for(i in 1:length(gg_tree_size$x$data))
+  {if(str_detect(gg_tree_size$x$data[[i]]$name,"[)]")) {gg_tree_size$x$data[[i]]$showlegend<-FALSE}}
+  gg_tree_size}
   }
   )
+
+
+output$jf_1_plot<-renderPlotly({plots_jf()})
 
 output$downloadData <- downloadHandler(
     filename = 'data_file.csv',

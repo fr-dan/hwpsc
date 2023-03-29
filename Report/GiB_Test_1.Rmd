@@ -44,6 +44,7 @@ library(MASS)
 library(nnet)
 library(glmmTMB)
 library(ggpubr)
+library(viridis)
 
 trim <- function (x) gsub("^\\s+|\\s+$", "", x)
 firstup <- function(x) {
@@ -135,7 +136,7 @@ write_xlsx(gib_clean_data,"gib_clean_data.xlsx")
 
 ```{r aligning units etc, include=FALSE}
 gib_clean_data_units_aligned <-
-  gib_clean_data %>% mutate(
+  gib_clean_data %>% mutate(N_Timber_Parcels=as.numeric(N_Timber_Parcels),
     across(Parcel_Volume_m3:Parcel_Volume_hft,
       ~ ifelse(is.na(as.numeric(.)), 0, as.numeric(.))),
     across(`Price (Â£/m3)`:`Total Volume (m3)`, ~ ifelse(is.na(.), 0, .)),
@@ -189,11 +190,72 @@ gg_gib2
 
 
 ```{r initial functions analysis, include=FALSE}
-tree_sp_func<-list("Ash","Beech","Cherry","Lime","Mixed","Oak","Poplar","Sweet Chestnut","Sycamore")
+tree_sp_func<-list("Ash","Beech","Cherry","Lime","Mixed","Oak","Poplar","Sweet Chestnut","Sycamore")[6][[1]]
 
-tree_product_func<-list("Beam","Biomass/Firewood","Mixed/Unknown","Planking","Sawlog")
+tree_pred_func<-list("Log/Tree Size","Sale/Purchase Type","Product","Region")[1][[1]]
 
-tree_pred_func<-list("Log/Tree Size","Species","Product","Region")[[1]]
+tree_additional_func<-list("Sale/Purchase Type","Product","Region")[1][[1]]
 
+
+gib_clean_data_units_aligned<-read_xlsx("C:/Users/jack.forster/OneDrive - Forest Research/Documents/HomeDrive/157b22_GiB/R Code and Data/gib_clean_data_units_aligned.xlsx")
+
+gib_clean_data_analysis<-gib_clean_data_units_aligned%>%filter(Tree_Species==tree_sp_func) #select relevant tree species
+
+tree_pred_func_orig<-tree_pred_func
+tree_pred_func<-dplyr::recode(tree_pred_func,"Sale/Purchase Type"="Cat_Key_Trt")
+tree_additional_func<-dplyr::recode(unlist(tree_additional_func),"Sale/Purchase Type"="Cat_Key_Trt")
+# recode inputs
+
+
+if(tree_pred_func == "Log/Tree Size") {
+  if(length(tree_additional_func)>1) {tree_additional_func<-paste0("interaction(",paste(tree_additional_func,collapse=","),")")}
+ tree_additional_func_group<-paste0("interaction(","Average_Size_Clean_m3",",tree_additional_func",")")
+    gg_tree_size<-ggplot(gib_clean_data_analysis,aes_string(x="Average_Size_Clean_m3",y="Price_Clean_m3",colour=tree_additional_func,fill=tree_additional_func,group=tree_additional_func))+
+                 theme_bw()+
+                  geom_smooth(aes(text=paste0("Best fit line: ",scales::comma(Price_Clean_m3,accuracy=0.01))),method = 'lm')+
+                 geom_jitter(aes(text=paste0("Size = ",scales::comma(Average_Size_Clean_m3,accuracy=0.1)," m<sup>3</sup>","\n","Price = ",scales::comma(Price_Clean_m3,accuracy=0.01),"GBP\n",Cat_Key_Trt,"\n",Product,"\n",Region)),
+                                size=1.5,alpha=0.7,height=0,width=0.025)+
+      labs(x="Average log/tree size (m<sup>3</sup>)",y="Price (GBP)",colour="Grouping\n",fill="Grouping\n",title=paste(tree_sp_func," prices"))+
+      scale_colour_viridis(discrete=TRUE)+
+      scale_fill_viridis(discrete=TRUE)
+
+    gg_tree_size<-ggplotly(gg_tree_size,tooltip=c("text"))%>%layout(title=list(x=0.5,font=list(size=20)),legend = list(x=1.1,y=0.5,yanchor="middle"),hoverlabel=list(xanchor="left",yanchor="middle"))%>%style(textposition = "left") 
+    for(i in 1: length(gg_tree_size$x$layout$shapes)) {gg_tree_size$x$layout$shapes[[i]]$line$width<-0.5}
+    gg_tree_size
+  
+} else {
+
+  if(length(tree_additional_func)>1) {tree_additional_func<-paste0("interaction(",paste(tree_additional_func,collapse=","),")")}
+ tree_additional_func_group<-paste0("interaction(",tree_pred_func,",",tree_additional_func,")") 
+    gg_tree_size<-ggplot(gib_clean_data_analysis,aes_string(x=tree_pred_func,y="Price_Clean_m3",colour=tree_additional_func,fill=tree_additional_func,group=tree_additional_func_group))+
+                 theme_bw()+
+                 geom_violin(colour=NA,alpha=0.4,position=position_dodge(width=0.4))+
+                 geom_point(aes(text=paste0("Size = ",scales::comma(Average_Size_Clean_m3,accuracy=0.1)," m<sup>3</sup>","\n","Price = ",scales::comma(Price_Clean_m3,accuracy=0.01),"GBP\n",Cat_Key_Trt,"\n",Product,"\n",Region)),position=position_jitterdodge(jitter.width=0.1,dodge.width=0.4),
+                                size=1.5,alpha=0.7,height=0,width=0.075)+
+      labs(x=paste(tree_pred_func_orig),y="Price (GBP)",colour="Grouping\n",fill="Grouping\n",title=paste(tree_sp_func," prices"))+
+      scale_colour_viridis(discrete=TRUE)+
+      scale_fill_viridis(discrete=TRUE)
+
+    gg_tree_size<-ggplotly(gg_tree_size,tooltip=c("text"))%>%layout(title=list(x=0.5,font=list(size=20)),legend = list(x=1.1,y=0.5,yanchor="middle"),hoverlabel=list(xanchor="left",yanchor="middle"))%>%style(textposition = "left") 
+    for(i in 1: length(gg_tree_size$x$layout$shapes)) {gg_tree_size$x$layout$shapes[[i]]$line$width<-0.5}
+    for(i in 1:length(gg_tree_size$x$data))
+    {if(length(gg_tree_size$x$data[[i]]$text)>1000) {gg_tree_size$x$data[[i]]$text<-""}}
+    for(i in 1:length(gg_tree_size$x$data))
+    {if(str_detect(gg_tree_size$x$data[[i]]$name,"[)]")) {gg_tree_size$x$data[[i]]$showlegend<-FALSE}}
+    gg_tree_size}
+  
+
+#model_1<-lmer(Price_Clean_m3~splines::ns(Average_Size_Clean_m3,df=3)*(Tree_Species+Cat_Key_Trt+Product)+scale(Parcel_Volume_Clean_m3)+scale(Volume_Clean_m3)+scale(N_Timber_Parcels)+Region+(1|Unique_GiB_Ref),data=gib_clean_data_units_aligned)
+
+tree_pred_func<-dplyr::recode(tree_pred_func,"Sale/Purchase Type"="Cat_Key_Trt","Species"="Tree_Species")
+
+tree_pred_func_all<-c("Cat_Key_Trt","Tree_Species","Product","Region")
+
+tree_pred_func_all<-tree_pred_func_all[! tree_pred_func_all %in% tree_pred_func]
+  
+if(tree_pred_func == "Log/Tree Size") {
+  
+} else
+#emmeans(model_1,rg.limit = 10800,formula(paste0("~", tree_pred_func,"+Average_Size_Clean_m3","|",paste(tree_pred_func_all,collapse="+"))),at=list(Average_Size_Clean_m3=seq(min(gib_clean_data_units_aligned$Average_Size_Clean_m3,na.rm=TRUE),max(gib_clean_data_units_aligned$Average_Size_Clean_m3,na.rm=TRUE),length.out=10)))
 
 ```
