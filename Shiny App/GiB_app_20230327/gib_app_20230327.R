@@ -16,6 +16,8 @@ library(rsconnect)
 library(callr)
 library(fresh)
 library(viridis)
+library(plotly)
+library(rpivotTable)
 
 mytheme <- create_theme(
   adminlte_color(
@@ -23,7 +25,7 @@ mytheme <- create_theme(
   ),
   adminlte_sidebar(
     dark_bg = "#9ACA3C",
-    dark_hover_bg = "#81A1C1",
+    dark_hover_bg = "#374217",
     dark_color = "#2E3440"
   ),
   adminlte_global(
@@ -75,6 +77,11 @@ ui <- dashboardPage(
         div(actionButton("process_jf", "Go!"),style="margin: 0px 0px 0px 80px;"),
         # Horizontal line ----
         tags$hr(),
+        # Tabs: Select a tab ----
+        menuItem("Chart", icon = icon("map-location"), tabName = "chart_jf"),
+        menuItem("Table", icon = icon("table"), tabName = "table_jf"),
+        # Horizontal line ----
+        tags$hr(),
         # Input: Download dashboard ----
         div(style="display:inline-block;width=32%;text-align: center;",
             downloadButton("downloadReport", "Download Report",style="padding: 5px 14px 5px 14px;margin: 5px 5px 5px 38px;")),
@@ -85,10 +92,16 @@ ui <- dashboardPage(
         downloadButton("downloadData", "Download Data",style="padding: 5px 14px 5px 14px;margin: 5px 5px 5px 38px;"))
         )
     ),
-    dashboardBody(use_theme(mytheme),tags$head(tags$style(HTML('.box{-webkit-box-shadow: none; -moz-box-shadow: none;box-shadow: none;border-top: none;}'))),
-                  fluidPage(box(width = 12,plotlyOutput("jf_1_plot")),
+    dashboardBody(use_theme(mytheme),
+                  tags$head(tags$style(HTML('.box{-webkit-box-shadow: none; -moz-box-shadow: none;box-shadow: none;border-top: none;}'))),
+                  tabItems(
+                  tabItem(tabName = "chart_jf",fluidPage(box(width = 12,plotlyOutput("jf_1_plot")),
              tags$style(type = "text/css", ".plotly  {height: calc(100vh - 100px) !important; width: calc(100vw - 380px) !important;}"),)
     ),
+    tabItem(tabName = "table_jf",
+            tags$head(tags$style( type = 'text/css',  '.rpivotTable{overflow: auto; font-size: 10px; line-height: 0.9} .pvtCheckContainer{overflow: auto; font-size: 8px; max-height: 100px; margin-left: 200px;}')),
+            fluidPage(box(width = 12,rpivotTableOutput("table1")))
+    ))),
     tags$head(tags$style(HTML('* {font-family: "Arial"};')))
 )
 
@@ -162,6 +175,29 @@ plots_jf <- eventReactive(input$process_jf, {
 
 
 output$jf_1_plot<-renderPlotly({plots_jf()})
+
+temp1 <- eventReactive(input$process_jf, {
+  gib_clean_data_units_aligned<-read_xlsx("C:/Users/jack.forster/OneDrive - Forest Research/Documents/HomeDrive/157b22_GiB/R Code and Data/gib_clean_data_units_aligned.xlsx")
+  gib_clean_data_rpivot<-gib_clean_data_units_aligned%>%dplyr::select(Region,"Sale/Purchase Type"=Cat_Key_Trt,"Timber or Firewood"=Timber_Firewood,
+                                                                      "Tree Sp. and Product"=Tree_Species_Product,"Log or Tree"=Log_Tree,
+                                                                      "Tree Sp."=Tree_Species,Grade,Product,"Average Size (m3)"=Average_Size_Clean_m3,
+                                                                      Price_Clean_m3)%>%group_by(Region,`Sale/Purchase Type`,`Timber or Firewood`,`Tree Sp. and Product`,
+                                                                                                 `Log or Tree`,`Tree Sp.`,Grade,Product,`Average Size (m3)`)%>%
+                                                                      summarise(`Average Price (m-3)`=median(Price_Clean_m3,na.rm=TRUE))
+  gib_clean_data_rpivot
+  }
+)
+
+output$table1 <- renderRpivotTable(
+  rpivotTable(temp1(),rows=c("Tree Sp."),cols=c("Sale/Purchase Type"),vals=c("Average Price (m-3)"),
+              aggregatorName="Median",width="90%",height="90%",
+              sorters=
+                "function(attr) {
+var sortAs = $.pivotUtilities.sortAs;
+if (attr == \"Difference vs. ONS\") { return sortAs([\"Lower\", \"Same\", \"Higher\", \"ONS Catchment\"]); }}")
+)
+
+
 
 output$downloadData <- downloadHandler(
     filename = 'data_file.csv',
